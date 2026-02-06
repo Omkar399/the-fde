@@ -9,7 +9,7 @@ load_dotenv()
 class Config:
     # Gemini
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    GEMINI_MODEL = "gemini-2.0-flash"
+    GEMINI_MODEL = "gemini-3-flash-preview"
 
     # AGI Inc Browser
     AGI_API_KEY = os.getenv("AGI_API_KEY", "")

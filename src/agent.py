@@ -15,7 +15,6 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from src.config import Config
 from src.memory import MemoryStore
 from src.brain import Brain
 from src.research import ResearchEngine
