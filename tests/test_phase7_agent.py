@@ -2,7 +2,6 @@
 import os
 import json
 import pytest
-from unittest.mock import patch, MagicMock
 
 os.environ["DEMO_MODE"] = "true"
 
