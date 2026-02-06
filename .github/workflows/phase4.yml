@@ -1,0 +1,33 @@
+name: "Phase 4: AGI Browser"
+
+on:
+  push:
+    paths:
+      - "src/browser.py"
+      - "tests/test_phase4_*.py"
+  pull_request:
+    paths:
+      - "src/browser.py"
+      - "tests/test_phase4_*.py"
+
+jobs:
+  phase4-tests:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_MODE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest ruff
+
+      - name: Lint Phase 4 files
+        run: ruff check src/browser.py
+
+      - name: Run Phase 4 tests
+        run: pytest tests/test_phase4_browser.py -v

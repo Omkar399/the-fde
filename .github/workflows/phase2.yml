@@ -1,0 +1,41 @@
+name: "Phase 2: Brain & Research"
+
+on:
+  push:
+    paths:
+      - "src/brain.py"
+      - "src/research.py"
+      - "tests/test_phase2_*.py"
+  pull_request:
+    paths:
+      - "src/brain.py"
+      - "src/research.py"
+      - "tests/test_phase2_*.py"
+
+jobs:
+  phase2-tests:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_MODE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest ruff
+
+      - name: Lint Phase 2 files
+        run: ruff check src/brain.py src/research.py
+
+      - name: Teammate A tests (Brain)
+        run: pytest tests/test_phase2_brain.py -v
+
+      - name: Teammate B tests (Research)
+        run: pytest tests/test_phase2_research.py -v
+
+      - name: Integration tests
+        run: pytest tests/test_phase2_integration.py -v

@@ -65,9 +65,9 @@ class BrowserAgent:
         )
         console.print(f"  [cyan]AGI Browser:[/cyan] Navigating to {portal_url}...")
         requests.post(
-            f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/messages",
+            f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/message",
             headers=headers,
-            json={"content": task_message},
+            json={"message": task_message},
             timeout=30,
         )
 
@@ -88,7 +88,7 @@ class BrowserAgent:
             resp = requests.get(
                 f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/messages",
                 headers=headers,
-                params={"after_id": after_id},
+                params={"after_id": after_id, "sanitize": "true"},
                 timeout=10,
             )
             if resp.status_code != 200:
@@ -104,7 +104,7 @@ class BrowserAgent:
                     return content
 
             status = data.get("status", "")
-            if status in ("finished", "error"):
+            if status in ("finished", "error", "waiting_for_input"):
                 break
 
         return None
@@ -124,7 +124,7 @@ class BrowserAgent:
 
         console.print(f"  [cyan]AGI Browser:[/cyan] Opening portal for {client_name}...")
         time.sleep(0.5)  # Simulate browser loading
-        console.print(f"  [cyan]AGI Browser:[/cyan] Logged in. Downloading CSV...")
+        console.print("  [cyan]AGI Browser:[/cyan] Logged in. Downloading CSV...")
         time.sleep(0.3)
 
         with open(filepath, "r") as f:
