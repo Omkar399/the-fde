@@ -108,7 +108,7 @@ class Teacher:
     def _mock_ask(self, column_name: str, suggested_mapping: str) -> dict:
         """Simulate a human response for demo mode."""
         console.print()
-        console.print(f"  [bold magenta]>>> PHONE RINGING... <<<[/bold magenta]")
+        console.print("  [bold magenta]>>> PHONE RINGING... <<<[/bold magenta]")
         time.sleep(1)
         console.print(
             f"  [magenta]Plivo:[/magenta] \"Hello! I found a column called "
@@ -116,7 +116,7 @@ class Teacher:
             f"Press 1 for Yes, 2 for No.\""
         )
         time.sleep(1.5)
-        console.print(f"  [magenta]Plivo:[/magenta] Human pressed: [bold]1 (Yes)[/bold]")
+        console.print("  [magenta]Plivo:[/magenta] Human pressed: [bold]1 (Yes)[/bold]")
         console.print(f"  [green]Human confirmed:[/green] '{column_name}' -> '{suggested_mapping}'")
         time.sleep(0.5)
 
