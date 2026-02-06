@@ -14,6 +14,8 @@ from rich.console import Console
 from src.config import Config
 from server.events import emit_event
 
+_delay = getattr(Config, 'delay', lambda s: s * 0.2)
+
 console = Console()
 
 
@@ -165,8 +167,14 @@ class BrowserAgent:
         file_map = {
             "Acme Corp": "client_a_acme.csv",
             "Globex Inc": "client_b_globex.csv",
+            "Initech Ltd": "client_c_initech.csv",
         }
-        portal_key = "acme" if "Acme" in client_name else "globex"
+        if "Acme" in client_name:
+            portal_key = "acme"
+        elif "Globex" in client_name:
+            portal_key = "globex"
+        else:
+            portal_key = "initech"
         filename = file_map.get(client_name, "client_a_acme.csv")
         filepath = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "data", "mock", filename
@@ -178,21 +186,21 @@ class BrowserAgent:
             "action": "Opening login page...",
         })
         console.print(f"  [cyan]AGI Browser:[/cyan] Opening portal for {client_name}...")
-        time.sleep(1.5)
+        time.sleep(_delay(1.5))
 
         emit_event("browser_navigate", {
             "url": f"/portal/{portal_key}/dashboard",
             "action": "Logging in and loading data dashboard...",
         })
         console.print(f"  [cyan]AGI Browser:[/cyan] Logged in. Navigating to data dashboard...")
-        time.sleep(1.5)
+        time.sleep(_delay(1.5))
 
         emit_event("browser_navigate", {
             "url": f"/portal/{portal_key}/download",
             "action": "Downloading CSV export...",
         })
         console.print("  [cyan]AGI Browser:[/cyan] Downloading CSV...")
-        time.sleep(1.0)
+        time.sleep(_delay(1.0))
 
         with open(filepath, "r") as f:
             raw_csv = f.read()

@@ -1314,3 +1314,41 @@ body {
     0% { background: var(--green-50); }
     100% { background: var(--surface); }
 }
+
+/* === LEARNING CURVE RESULTS TABLE === */
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+.results-table th, .results-table td {
+    padding: 8px 12px;
+    border: 1px solid var(--slate-200, #E2E8F0);
+    text-align: center;
+}
+.results-table th {
+    background: var(--blue-50, #EFF6FF);
+    color: var(--blue-700, #1D4ED8);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.results-table td {
+    color: var(--slate-700, #334155);
+    font-size: 13px;
+}
+.metric {
+    margin-top: 1rem;
+    color: var(--green-600, #059669);
+    font-size: 1.1em;
+}
+#results-panel {
+    padding: 1rem;
+}
+#results-panel h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--slate-800, #1E293B);
+    margin-bottom: 0.5rem;
+}

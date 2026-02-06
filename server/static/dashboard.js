@@ -487,8 +487,9 @@ function switchTab(tab) {
         state.demoRunning = false;
         resetButton();
         log(
-            "Demo complete! Phase 1 calls: " + data.phase1_calls +
-            ", Phase 2 calls: " + data.phase2_calls +
+            "Demo complete! Phase 1 calls: " + (data.phase1_calls || 0) +
+            ", Phase 2 calls: " + (data.phase2_calls || 0) +
+            ", Phase 3 calls: " + (data.phase3_calls || 0) +
             ", Memory: " + data.memory_size,
             "success"
         );
@@ -500,11 +501,44 @@ function switchTab(tab) {
         if (data.summaries) {
             if (data.summaries["1"]) state.results[1] = data.summaries["1"];
             if (data.summaries["2"]) state.results[2] = data.summaries["2"];
+            if (data.summaries["3"]) state.results[3] = data.summaries["3"];
             renderResults();
         }
 
+        // Show learning curve results if available
+        showLearningCurve(data);
+
         // Auto-switch to Results tab
         switchTab("results");
+    }
+
+    function showLearningCurve(data) {
+        var resultsPanel = document.getElementById("results-panel");
+        if (!resultsPanel) return;
+
+        var curve = data.learning_curve || [];
+        if (curve.length === 0) return;
+
+        var html = '<h3>Learning Curve Results</h3>';
+        html += '<table class="results-table">';
+        html += '<tr><th>Client</th><th>Phase</th><th>Memory Hits</th><th>Human Calls</th></tr>';
+        for (var i = 0; i < curve.length; i++) {
+            var point = curve[i];
+            html += '<tr>' +
+                '<td>' + esc(point.client) + '</td>' +
+                '<td>' + point.phase + '</td>' +
+                '<td>' + point.memory_hits + '</td>' +
+                '<td>' + point.human_calls + '</td>' +
+                '</tr>';
+        }
+        html += '</table>';
+
+        if (data.memory_size) {
+            html += '<p class="metric">Total Mappings Learned: <strong>' + data.memory_size + '</strong></p>';
+        }
+
+        resultsPanel.innerHTML = html;
+        resultsPanel.style.display = 'block';
     }
 
     // ── Reset Handler ──────────────────────────────────

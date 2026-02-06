@@ -2,7 +2,7 @@ name: FDE CI
 
 on:
   push:
-    branches: [main, "phase-*"]
+    branches: [main, "phase-*", "ui-redesign"]
   pull_request:
     branches: [main]
 
@@ -11,23 +11,39 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-
       - name: Install ruff
         run: pip install ruff
-
       - name: Lint with ruff
-        run: ruff check src/ tests/ --select E,F,W --ignore E501,F541
+        run: ruff check src/ tests/ server/ --select E,F,W --ignore E501,F541
+
+  phase1:
+    runs-on: ubuntu-latest
+    needs: lint
+    env:
+      DEMO_MODE: "true"
+      DEMO_SPEED: "fast"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+      - name: Phase 1 tests
+        run: pytest tests/test_phase1_config.py tests/test_phase1_memory.py -v
 
   phase2:
     runs-on: ubuntu-latest
     needs: lint
     env:
       DEMO_MODE: "true"
+      DEMO_SPEED: "fast"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -38,13 +54,14 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
       - name: Phase 2 tests
-        run: pytest tests/test_phase2.py tests/test_phase2_brain.py tests/test_phase2_research.py tests/test_phase2_integration.py -v
+        run: pytest tests/test_phase2_brain.py tests/test_phase2_research.py tests/test_phase2_integration.py -v
 
   phase6:
     runs-on: ubuntu-latest
     needs: lint
     env:
       DEMO_MODE: "true"
+      DEMO_SPEED: "fast"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -59,9 +76,10 @@ jobs:
 
   phase7:
     runs-on: ubuntu-latest
-    needs: [phase2, phase6]
+    needs: [phase1, phase2, phase6]
     env:
       DEMO_MODE: "true"
+      DEMO_SPEED: "fast"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -81,6 +99,7 @@ jobs:
     needs: phase7
     env:
       DEMO_MODE: "true"
+      DEMO_SPEED: "fast"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

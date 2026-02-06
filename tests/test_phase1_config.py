@@ -42,8 +42,9 @@ class TestConfigValues:
         assert Config.AGI_BASE_URL == "https://api.agi.tech/v1"
 
     def test_webhook_base_url_default(self):
-        """WEBHOOK_BASE_URL defaults to localhost:5000."""
+        """WEBHOOK_BASE_URL is a valid HTTP(S) URL (defaults to localhost:5001)."""
         assert Config.WEBHOOK_BASE_URL.startswith("http")
+        assert "://" in Config.WEBHOOK_BASE_URL
 
     def test_api_keys_are_strings(self):
         """All API keys are strings (possibly empty)."""
@@ -51,6 +52,19 @@ class TestConfigValues:
         assert isinstance(Config.AGI_API_KEY, str)
         assert isinstance(Config.COMPOSIO_API_KEY, str)
         assert isinstance(Config.YOU_API_KEY, str)
+
+    def test_demo_speed_default(self):
+        """DEMO_SPEED defaults to 'fast'."""
+        assert Config.DEMO_SPEED in ("fast", "normal")
+
+    def test_delay_returns_float(self):
+        """Config.delay() returns a float."""
+        result = Config.delay(1.0)
+        assert isinstance(result, float)
+        if Config.DEMO_SPEED == "fast":
+            assert result == pytest.approx(0.2)
+        else:
+            assert result == pytest.approx(1.0)
 
     def test_plivo_fields_are_strings(self):
         """All Plivo fields are strings (possibly empty)."""
@@ -162,3 +176,27 @@ class TestMockCSVs:
         for row in rows:
             for key, val in row.items():
                 assert val.strip() != "", f"Empty value in Client B: row {row}, col {key}"
+
+    def test_client_c_has_14_columns(self):
+        """Client C CSV has exactly 14 columns."""
+        cols, _ = self._load_csv("client_c_initech.csv")
+        assert len(cols) == 14
+
+    def test_client_c_has_5_rows(self):
+        """Client C CSV has 5 data rows."""
+        _, rows = self._load_csv("client_c_initech.csv")
+        assert len(rows) == 5
+
+    def test_client_c_columns_are_different(self):
+        """Client C uses yet another naming convention (client_ref, display_name, etc.)."""
+        cols, _ = self._load_csv("client_c_initech.csv")
+        assert "client_ref" in cols
+        assert "display_name" in cols
+        assert "tier_level" in cols
+
+    def test_no_empty_values_in_client_c(self):
+        """Client C has no empty cells."""
+        _, rows = self._load_csv("client_c_initech.csv")
+        for row in rows:
+            for key, val in row.items():
+                assert val.strip() != "", f"Empty value in Client C: row {row}, col {key}"

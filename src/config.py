@@ -29,12 +29,20 @@ class Config:
     YOU_SEARCH_URL = "https://ydc-index.io/v1/search"
 
     # Webhook server
-    WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "http://localhost:5000")
+    WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "http://localhost:5001")
 
     # Demo mode
     DEMO_MODE = os.getenv("DEMO_MODE", "false").lower() == "true"
+    DEMO_SPEED = os.getenv("DEMO_SPEED", "fast")  # "fast" or "normal"
+
+    @staticmethod
+    def delay(normal_seconds: float) -> float:
+        """Return adjusted delay based on DEMO_SPEED."""
+        if Config.DEMO_SPEED == "fast":
+            return normal_seconds * 0.2
+        return normal_seconds
 
     # Memory
     MEMORY_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "memory")
     CONFIDENCE_THRESHOLD = 0.75  # Below this, ask the human
-    MEMORY_DISTANCE_THRESHOLD = 0.3  # Max vector distance for auto-match
+    MEMORY_DISTANCE_THRESHOLD = 0.35  # Max vector distance for auto-match

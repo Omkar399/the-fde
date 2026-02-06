@@ -107,19 +107,34 @@ class Teacher:
 
     def _mock_ask(self, column_name: str, suggested_mapping: str) -> dict:
         """Simulate a human response for demo mode."""
+        # Simulate rejection for certain ambiguous fields
+        reject_columns = {"is_active_flg", "active_flag", "status"}
+
+        delay = Config.delay
+
         console.print()
         console.print("  [bold magenta]>>> PHONE RINGING... <<<[/bold magenta]")
-        time.sleep(1)
+        time.sleep(delay(1.0))
         console.print(
             f"  [magenta]Plivo:[/magenta] \"Hello! I found a column called "
             f"'{column_name}'. Is this the '{suggested_mapping}' field? "
             f"Press 1 for Yes, 2 for No.\""
         )
-        time.sleep(1.5)
+        time.sleep(delay(1.5))
+
+        if column_name in reject_columns:
+            console.print("  [magenta]Plivo:[/magenta] Human pressed: [bold]2 (No)[/bold]")
+            console.print(f"  [red]Human rejected:[/red] '{column_name}' -> '{suggested_mapping}'")
+            time.sleep(delay(0.5))
+            return {
+                "confirmed": False,
+                "target_field": suggested_mapping,
+                "method": "demo_simulated",
+            }
+
         console.print("  [magenta]Plivo:[/magenta] Human pressed: [bold]1 (Yes)[/bold]")
         console.print(f"  [green]Human confirmed:[/green] '{column_name}' -> '{suggested_mapping}'")
-        time.sleep(0.5)
-
+        time.sleep(delay(0.5))
         return {
             "confirmed": True,
             "target_field": suggested_mapping,

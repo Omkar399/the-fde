@@ -37,15 +37,23 @@ class MemoryStore:
             )
 
     def store_mapping(self, source_column: str, target_field: str, client_name: str) -> None:
-        """Store a learned mapping: source column name -> target schema field."""
+        """Store a learned mapping: source column name -> target schema field.
+
+        The document text includes both source and target names to give the
+        embedding model enough context for semantic matching across different
+        naming conventions (e.g., "cust_id" vs "customer_id").
+        """
         doc_id = f"{client_name}_{source_column}"
+        # Include target field in document for richer embeddings
+        doc_text = f"{source_column} maps to {target_field}"
         self._collection.upsert(
             ids=[doc_id],
-            documents=[source_column],
+            documents=[doc_text],
             metadatas=[{
                 "source_column": source_column,
                 "target_field": target_field,
                 "client_name": client_name,
+                "uses": 0,
             }],
         )
         console.print(
@@ -62,8 +70,10 @@ class MemoryStore:
         if self._collection.count() == 0:
             return []
 
+        # Query with the column name as a mapping hint for better semantic match
+        query_text = f"{column_name} maps to"
         results = self._collection.query(
-            query_texts=[column_name],
+            query_texts=[query_text],
             n_results=min(n_results, self._collection.count()),
         )
 
@@ -75,6 +85,7 @@ class MemoryStore:
                 "source_column": metadata["source_column"],
                 "target_field": metadata["target_field"],
                 "client_name": metadata["client_name"],
+                "uses": metadata.get("uses", 0),
                 "distance": distance,
                 "is_confident": distance <= Config.MEMORY_DISTANCE_THRESHOLD,
             })
@@ -85,10 +96,33 @@ class MemoryStore:
         """Find the best memory match for a column name.
 
         Returns the match if it's within the confidence threshold, else None.
+        Penalizes low-use mappings and increments the uses counter on match.
         """
         matches = self.lookup(column_name, n_results=1)
-        if matches and matches[0]["is_confident"]:
-            return matches[0]
+        if not matches:
+            return None
+
+        match = matches[0]
+        # Penalize mappings with fewer than 2 uses
+        uses = match.get("uses", 0)
+        adjusted_distance = match["distance"]
+        if uses < 2:
+            adjusted_distance += 0.01
+
+        if adjusted_distance <= Config.MEMORY_DISTANCE_THRESHOLD:
+            # Update uses counter
+            doc_id = f"{match['client_name']}_{match['source_column']}"
+            self._collection.update(
+                ids=[doc_id],
+                metadatas=[{
+                    "source_column": match["source_column"],
+                    "target_field": match["target_field"],
+                    "client_name": match["client_name"],
+                    "uses": uses + 1,
+                }],
+            )
+            match["is_confident"] = True
+            return match
         return None
 
     def get_all_mappings(self) -> list[dict]:

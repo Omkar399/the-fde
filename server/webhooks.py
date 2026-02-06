@@ -53,6 +53,11 @@ PORTAL_CONFIGS = {
         "primary_color": "#336633",
         "csv_file": "client_b_globex.csv",
     },
+    "initech": {
+        "client_name": "Initech Ltd",
+        "primary_color": "#663333",
+        "csv_file": "client_c_initech.csv",
+    },
 }
 
 
@@ -300,13 +305,33 @@ def _run_demo_background(config=None):
         )
         emit_event("phase_complete", {"phase": 2, "client": c2_name, "summary": summary_b})
 
+        # Client 3 defaults
+        c3 = clients[2] if len(clients) > 2 else {}
+        c3_name = c3.get("name") or "Initech Ltd"
+        c3_url = c3.get("portal_url") or f"{portal_base}/portal/initech"
+        c3_creds = {"username": c3.get("username") or "admin", "password": c3.get("password") or "admin123"} if c3 else None
+
+        # Brief pause
+        time.sleep(2)
+
+        # Phase 3: Expert
+        emit_event("phase_start", {"phase": 3, "client": c3_name})
+        summary_c = agent.onboard_client(
+            client_name=c3_name,
+            portal_url=c3_url,
+            credentials=c3_creds,
+        )
+        emit_event("phase_complete", {"phase": 3, "client": c3_name, "summary": summary_c})
+
         emit_event("demo_complete", {
             "phase1_calls": summary_a.get("phone_calls", 0),
             "phase2_calls": summary_b.get("phone_calls", 0),
+            "phase3_calls": summary_c.get("phone_calls", 0),
             "memory_size": agent.memory.count,
             "summaries": {
                 "1": summary_a,
                 "2": summary_b,
+                "3": summary_c,
             },
         })
 
@@ -337,6 +362,30 @@ def demo_start():
 def demo_status():
     """Check if the demo is currently running."""
     return {"running": _demo_running}
+
+
+# ── Metrics ─────────────────────────────────────────────
+
+@app.route("/metrics", methods=["GET"])
+def metrics():
+    """Return learning metrics for the dashboard."""
+    from src.memory import MemoryStore
+    try:
+        store = MemoryStore()
+        all_mappings = store.get_all_mappings()
+        clients = {}
+        for m in all_mappings:
+            client = m.get("client_name", "unknown")
+            if client not in clients:
+                clients[client] = 0
+            clients[client] += 1
+        return {
+            "total_mappings": len(all_mappings),
+            "clients": clients,
+            "memory_hit_rate": "Calculated during demo runs",
+        }
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 
 # ── Health ──────────────────────────────────────────────
