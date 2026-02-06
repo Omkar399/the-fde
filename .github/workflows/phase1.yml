@@ -1,0 +1,42 @@
+name: "Phase 1: Config & Memory"
+
+on:
+  push:
+    paths:
+      - "src/config.py"
+      - "src/memory.py"
+      - "data/target_schema.json"
+      - "data/mock/*.csv"
+      - "tests/test_phase1_*.py"
+  pull_request:
+    paths:
+      - "src/config.py"
+      - "src/memory.py"
+      - "data/target_schema.json"
+      - "data/mock/*.csv"
+      - "tests/test_phase1_*.py"
+
+jobs:
+  phase1-tests:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_MODE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest ruff
+
+      - name: Lint Phase 1 files
+        run: ruff check src/config.py src/memory.py
+
+      - name: Config & data tests
+        run: pytest tests/test_phase1_config.py -v
+
+      - name: Memory tests
+        run: pytest tests/test_phase1_memory.py -v

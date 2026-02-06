@@ -1,0 +1,38 @@
+name: "Phase 5: Plivo Voice"
+
+on:
+  push:
+    paths:
+      - "src/teacher.py"
+      - "server/**"
+      - "tests/test_phase5_*.py"
+  pull_request:
+    paths:
+      - "src/teacher.py"
+      - "server/**"
+      - "tests/test_phase5_*.py"
+
+jobs:
+  phase5-tests:
+    runs-on: ubuntu-latest
+    env:
+      DEMO_MODE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest ruff
+
+      - name: Lint Phase 5 files
+        run: ruff check src/teacher.py server/webhooks.py
+
+      - name: Teacher tests
+        run: pytest tests/test_phase5_plivo.py -v
+
+      - name: Webhook tests
+        run: pytest tests/test_phase5_webhooks.py -v
