@@ -12,6 +12,7 @@ import requests
 from rich.console import Console
 
 from src.config import Config
+from server.events import emit_event
 
 console = Console()
 
@@ -22,8 +23,13 @@ class BrowserAgent:
     def __init__(self):
         self._session_id = None
 
-    def scrape_client_data(self, client_name: str, portal_url: str) -> dict:
+    def scrape_client_data(self, client_name: str, portal_url: str, credentials: dict | None = None) -> dict:
         """Scrape CSV data from a client portal.
+
+        Args:
+            client_name: Display name of the client.
+            portal_url: URL of the client portal.
+            credentials: Optional dict with "username" and "password" keys.
 
         Returns:
             dict with keys: columns (list), rows (list of dicts), raw_csv (str)
@@ -32,12 +38,12 @@ class BrowserAgent:
             return self._mock_scrape(client_name)
 
         try:
-            return self._agi_scrape(client_name, portal_url)
+            return self._agi_scrape(client_name, portal_url, credentials)
         except Exception as e:
             console.print(f"  [yellow]AGI Browser failed: {e}. Using local fallback.[/yellow]")
             return self._mock_scrape(client_name)
 
-    def _agi_scrape(self, client_name: str, portal_url: str) -> dict:
+    def _agi_scrape(self, client_name: str, portal_url: str, credentials: dict | None = None) -> dict:
         """Use AGI Inc API to scrape data from a portal."""
         headers = {
             "Authorization": f"Bearer {Config.AGI_API_KEY}",
@@ -45,6 +51,7 @@ class BrowserAgent:
         }
 
         # Step 1: Create a browser session
+        emit_event("browser_navigate", {"url": portal_url, "action": "Creating AGI browser session..."})
         console.print("  [cyan]AGI Browser:[/cyan] Creating session...")
         resp = requests.post(
             f"{Config.AGI_BASE_URL}/sessions",
@@ -57,14 +64,27 @@ class BrowserAgent:
         self._session_id = session["session_id"]
         console.print(f"  [cyan]AGI Browser:[/cyan] Session ready: {self._session_id[:8]}...")
 
+        # Get live VNC view URL for the dashboard
+        vnc_url = session.get("vnc_url", "")
+        if vnc_url:
+            console.print(f"  [cyan]AGI Browser:[/cyan] Live view: {vnc_url}")
+            emit_event("browser_live", {
+                "vnc_url": vnc_url,
+                "session_id": self._session_id,
+                "action": "AGI Browser session started — watching live",
+            })
+
         # Step 2: Send task to navigate and scrape
+        cred_user = (credentials or {}).get("username", "admin")
+        cred_pass = (credentials or {}).get("password", "admin123")
         task_message = (
             f"Navigate to {portal_url}. "
             f"This is a legacy enterprise portal. Log in with the pre-filled credentials "
-            f"(username: admin, password: admin123), then navigate to the data dashboard "
+            f"(username: {cred_user}, password: {cred_pass}), then navigate to the data dashboard "
             f"and download the customer data CSV file for {client_name}. "
             f"Return the CSV content."
         )
+        emit_event("browser_navigate", {"url": portal_url, "action": "Navigating to portal and scraping data..."})
         console.print(f"  [cyan]AGI Browser:[/cyan] Navigating to {portal_url}...")
         requests.post(
             f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/message",
@@ -81,9 +101,9 @@ class BrowserAgent:
         # Fallback: try direct download endpoint
         console.print("  [yellow]AGI Browser: Polling timeout, trying direct download...[/yellow]")
         try:
-            download_url = portal_url.rstrip("/").rsplit("/", 1)[0] + "/download"
+            download_url = portal_url.rstrip("/") + "/download"
             resp = requests.get(download_url, timeout=10)
-            if resp.status_code == 200 and "," in resp.text:
+            if resp.status_code == 200 and self._looks_like_csv(resp.text):
                 console.print("  [cyan]AGI Browser:[/cyan] Direct download succeeded")
                 return self._parse_csv(resp.text)
         except Exception:
@@ -112,8 +132,7 @@ class BrowserAgent:
             for msg in messages:
                 after_id = max(after_id, msg.get("id", 0))
                 content = msg.get("content", "")
-                # Look for CSV-like content in the response
-                if "," in content and "\n" in content:
+                if self._looks_like_csv(content):
                     return content
 
             status = data.get("status", "")
@@ -121,6 +140,23 @@ class BrowserAgent:
                 break
 
         return None
+
+    @staticmethod
+    def _looks_like_csv(content: str) -> bool:
+        """Check if content is actual CSV data, not conversational text."""
+        lines = content.strip().split("\n")
+        if len(lines) < 2:
+            return False
+        # Header line must have 3+ comma-separated short fields
+        headers = lines[0].split(",")
+        if len(headers) < 3:
+            return False
+        # Column headers should be short (not sentences)
+        if any(len(h.strip()) > 50 for h in headers):
+            return False
+        # At least one data row must have the same number of commas as the header
+        header_commas = lines[0].count(",")
+        return any(line.count(",") == header_commas for line in lines[1:5])
 
     def _mock_scrape(self, client_name: str) -> dict:
         """Load data from local mock CSV files."""
@@ -130,18 +166,41 @@ class BrowserAgent:
             "Acme Corp": "client_a_acme.csv",
             "Globex Inc": "client_b_globex.csv",
         }
+        portal_key = "acme" if "Acme" in client_name else "globex"
         filename = file_map.get(client_name, "client_a_acme.csv")
         filepath = os.path.join(
             os.path.dirname(os.path.dirname(__file__)), "data", "mock", filename
         )
 
+        # Emit browser navigation events for the dashboard
+        emit_event("browser_navigate", {
+            "url": f"/portal/{portal_key}",
+            "action": "Opening login page...",
+        })
         console.print(f"  [cyan]AGI Browser:[/cyan] Opening portal for {client_name}...")
-        time.sleep(0.5)  # Simulate browser loading
-        console.print("  [cyan]AGI Browser:[/cyan] Logged in. Downloading CSV...")
-        time.sleep(0.3)
+        time.sleep(1.5)
+
+        emit_event("browser_navigate", {
+            "url": f"/portal/{portal_key}/dashboard",
+            "action": "Logging in and loading data dashboard...",
+        })
+        console.print(f"  [cyan]AGI Browser:[/cyan] Logged in. Navigating to data dashboard...")
+        time.sleep(1.5)
+
+        emit_event("browser_navigate", {
+            "url": f"/portal/{portal_key}/download",
+            "action": "Downloading CSV export...",
+        })
+        console.print("  [cyan]AGI Browser:[/cyan] Downloading CSV...")
+        time.sleep(1.0)
 
         with open(filepath, "r") as f:
             raw_csv = f.read()
+
+        emit_event("browser_navigate", {
+            "url": "",
+            "action": "CSV downloaded. Parsing data...",
+        })
 
         return self._parse_csv(raw_csv)
 

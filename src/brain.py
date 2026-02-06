@@ -22,7 +22,8 @@ For each source column, you must:
 2. Determine which target schema field it maps to
 3. Rate your confidence: "high" (>90% sure), "medium" (50-90%), or "low" (<50%)
 
-Be conservative with confidence. If a column name is abbreviated, ambiguous, or uses non-standard naming, rate it as "low" confidence.
+Be confident in your mappings. Common abbreviations (e.g. cust=customer, nm=name, dt=date, addr=address, cd=code, flg=flag, bal=balance, ts=timestamp) are well-known patterns — rate these as "high" confidence.
+Only rate a column "low" if the name is truly ambiguous and you cannot determine the target field with reasonable certainty, such as columns with opaque internal codes or version suffixes that change the meaning.
 
 Respond ONLY with valid JSON matching the requested schema."""
 
@@ -144,8 +145,8 @@ TARGET FIELD DESCRIPTIONS:
 RESEARCH CONTEXT:
 {research_context if research_context else "No additional context available."}
 
-Map each source column to the most likely target field. Be CONSERVATIVE with confidence ratings.
-Columns with abbreviations, version numbers, or non-standard names should be rated "low" confidence."""
+Map each source column to the most likely target field. Be confident — common abbreviations and naming patterns should be rated "high".
+Only rate a column "low" if it is truly ambiguous and the target field cannot be determined with reasonable certainty."""
 
         if Config.DEMO_MODE:
             return self._mock_analyze(columns, target_schema)
@@ -173,32 +174,32 @@ Columns with abbreviations, version numbers, or non-standard names should be rat
         known_mappings = {
             "cust_id": ("customer_id", "high"),
             "customer_id": ("customer_id", "high"),
-            "cust_nm": ("full_name", "medium"),
+            "cust_nm": ("full_name", "high"),
             "full_name": ("full_name", "high"),
             "cust_lvl_v2": ("subscription_tier", "low"),
-            "customer_level_ver2": ("subscription_tier", "low"),
-            "signup_dt": ("signup_date", "medium"),
+            "customer_level_ver2": ("subscription_tier", "high"),
+            "signup_dt": ("signup_date", "high"),
             "registration_date": ("signup_date", "high"),
             "email_addr": ("email", "high"),
             "contact_email": ("email", "high"),
             "phone_num": ("phone", "high"),
             "mobile": ("phone", "high"),
-            "addr_line1": ("address", "medium"),
+            "addr_line1": ("address", "high"),
             "street_address": ("address", "high"),
-            "city_nm": ("city", "medium"),
+            "city_nm": ("city", "high"),
             "city": ("city", "high"),
-            "st_cd": ("state", "medium"),
+            "st_cd": ("state", "high"),
             "state_code": ("state", "high"),
-            "zip_cd": ("zip_code", "medium"),
+            "zip_cd": ("zip_code", "high"),
             "postal_code": ("zip_code", "high"),
-            "dob": ("date_of_birth", "medium"),
+            "dob": ("date_of_birth", "high"),
             "date_of_birth": ("date_of_birth", "high"),
-            "acct_bal": ("account_balance", "medium"),
+            "acct_bal": ("account_balance", "high"),
             "balance_usd": ("account_balance", "high"),
-            "last_login_ts": ("last_login", "medium"),
-            "last_activity": ("last_login", "medium"),
-            "is_active_flg": ("is_active", "low"),
-            "status": ("is_active", "medium"),
+            "last_login_ts": ("last_login", "high"),
+            "last_activity": ("last_login", "high"),
+            "is_active_flg": ("is_active", "high"),
+            "status": ("is_active", "high"),
         }
         results = []
         for col in columns:

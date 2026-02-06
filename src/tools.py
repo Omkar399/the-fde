@@ -121,6 +121,7 @@ class ToolExecutor:
                 "success": True,
                 "records_deployed": len(transformed),
                 "message": f"Deployed {len(transformed)} records for {client_name}",
+                "url": sheet_url,
             }
         else:
             return {

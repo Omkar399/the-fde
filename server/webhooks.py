@@ -24,8 +24,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, request, Response, render_template, redirect, url_for
 from plivo import plivoxml
 
+import threading
+
 from src.teacher import set_human_response
-from server.events import subscribe, unsubscribe, get_history, format_sse
+from server.events import emit_event, subscribe, unsubscribe, get_history, format_sse, reset as reset_events
+from src.config import Config
+
+# Track demo state
+_demo_running = False
+_demo_lock = threading.Lock()
 
 app = Flask(
     __name__,
@@ -227,6 +234,109 @@ def dashboard_events():
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ── Demo Control Routes ─────────────────────────────────
+
+def _run_demo_background(config=None):
+    """Run the full demo pipeline in a background thread."""
+    global _demo_running
+    try:
+        from src.agent import FDEAgent
+
+        config = config or {}
+        clients = config.get("clients", [])
+        target_fields = config.get("target_fields")
+
+        # Build target_schema override from setup panel fields
+        target_schema = None
+        if target_fields:
+            target_schema = {
+                "schema_name": "SaaS CRM Onboarding Schema",
+                "description": "User-configured target schema.",
+                "fields": {
+                    f["name"]: {"type": f.get("type", "string"), "description": f["name"]}
+                    for f in target_fields
+                },
+            }
+
+        agent = FDEAgent(target_schema=target_schema)
+        agent.reset_memory()
+        reset_events()
+        emit_event("reset", {})
+
+        portal_base = Config.WEBHOOK_BASE_URL.rstrip("/")
+
+        # Client 1 defaults
+        c1 = clients[0] if len(clients) > 0 else {}
+        c1_name = c1.get("name") or "Acme Corp"
+        c1_url = c1.get("portal_url") or f"{portal_base}/portal/acme"
+        c1_creds = {"username": c1.get("username") or "admin", "password": c1.get("password") or "admin123"} if c1 else None
+
+        # Phase 1: Novice
+        emit_event("phase_start", {"phase": 1, "client": c1_name})
+        summary_a = agent.onboard_client(
+            client_name=c1_name,
+            portal_url=c1_url,
+            credentials=c1_creds,
+        )
+        emit_event("phase_complete", {"phase": 1, "client": c1_name, "summary": summary_a})
+
+        # Brief pause between phases
+        time.sleep(2)
+
+        # Client 2 defaults
+        c2 = clients[1] if len(clients) > 1 else {}
+        c2_name = c2.get("name") or "Globex Inc"
+        c2_url = c2.get("portal_url") or f"{portal_base}/portal/globex"
+        c2_creds = {"username": c2.get("username") or "admin", "password": c2.get("password") or "admin123"} if c2 else None
+
+        # Phase 2: Expert
+        emit_event("phase_start", {"phase": 2, "client": c2_name})
+        summary_b = agent.onboard_client(
+            client_name=c2_name,
+            portal_url=c2_url,
+            credentials=c2_creds,
+        )
+        emit_event("phase_complete", {"phase": 2, "client": c2_name, "summary": summary_b})
+
+        emit_event("demo_complete", {
+            "phase1_calls": summary_a.get("phone_calls", 0),
+            "phase2_calls": summary_b.get("phone_calls", 0),
+            "memory_size": agent.memory.count,
+            "summaries": {
+                "1": summary_a,
+                "2": summary_b,
+            },
+        })
+
+        agent.browser.close()
+    except Exception as e:
+        emit_event("error", {"message": str(e)})
+    finally:
+        with _demo_lock:
+            _demo_running = False
+
+
+@app.route("/demo/start", methods=["POST"])
+def demo_start():
+    """Start the demo pipeline in a background thread."""
+    global _demo_running
+    with _demo_lock:
+        if _demo_running:
+            return {"status": "already_running"}, 409
+        _demo_running = True
+
+    config = request.get_json(silent=True) or {}
+    thread = threading.Thread(target=_run_demo_background, args=(config,), daemon=True)
+    thread.start()
+    return {"status": "started"}
+
+
+@app.route("/demo/status", methods=["GET"])
+def demo_status():
+    """Check if the demo is currently running."""
+    return {"running": _demo_running}
 
 
 # ── Health ──────────────────────────────────────────────
