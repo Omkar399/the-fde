@@ -1,8 +1,7 @@
 """Phase 7 tests: run_demo.py -- imports, argument parsing, demo flow."""
 import os
 import sys
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 os.environ["DEMO_MODE"] = "true"
 

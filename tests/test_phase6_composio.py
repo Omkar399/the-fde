@@ -1,7 +1,6 @@
 """Phase 6 tests: Composio ToolExecutor -- deploy mapping and data transformation."""
 import os
 import pytest
-from unittest.mock import patch, MagicMock
 
 os.environ["DEMO_MODE"] = "true"
 
