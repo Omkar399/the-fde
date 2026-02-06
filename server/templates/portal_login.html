@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ client_name }} - Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/portal.css">
+    <style>
+        :root {
+            --brand-color: {{ primary_color }};
+        }
+    </style>
+</head>
+<body class="auth-page">
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="client-logo-placeholder" style="background-color: {{ primary_color }}">
+                    {{ client_name[0] }}
+                </div>
+                <h1>{{ client_name }}</h1>
+                <p class="auth-subtitle">Enterprise Data Portal</p>
+            </div>
+
+            <form method="POST" action="/portal/{{ client_key }}" class="auth-form">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" value="admin" class="form-input">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" value="admin123" class="form-input">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">Sign in</button>
+            </form>
+
+            <div class="auth-footer">
+                <a href="#" class="link-subtle">Forgot password?</a>
+                <span class="divider">•</span>
+                <a href="#" class="link-subtle">SSO Login</a>
+            </div>
+        </div>
+        
+        <div class="auth-meta">
+            <p>Secured by DataBridge Enterprise</p>
+        </div>
+    </div>
+</body>
+</html>

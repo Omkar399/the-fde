@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ client_name }} - Data Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/portal.css">
+    <style>
+        :root {
+            --brand-color: {{ primary_color }};
+        }
+    </style>
+</head>
+<body class="dashboard-page">
+    <div class="layout-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="client-avatar" style="background-color: {{ primary_color }}">
+                    {{ client_name[0] }}
+                </div>
+                <div class="client-info">
+                    <div class="client-name">{{ client_name }}</div>
+                    <div class="client-plan">Enterprise</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-label">Overview</div>
+                    <a href="/portal/{{ client_key }}" class="nav-item">
+                        <span class="nav-icon">⌂</span> Home
+                    </a>
+                    <a href="/portal/{{ client_key }}/dashboard" class="nav-item active">
+                        <span class="nav-icon">📊</span> Customer Data
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="nav-icon">📑</span> Reports
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <div class="nav-label">Settings</div>
+                    <a href="#" class="nav-item">
+                        <span class="nav-icon">⚙️</span> Configuration
+                    </a>
+                    <a href="#" class="nav-item">
+                        <span class="nav-icon">🔒</span> Access Control
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">A</div>
+                    <div class="user-details">
+                        <div class="user-name">Admin User</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-bar">
+                <h2 class="page-title">Customer Data Export</h2>
+                <div class="top-actions">
+                    <button class="btn btn-secondary">
+                        <span class="icon">↺</span> Refresh
+                    </button>
+                    <a href="/portal/{{ client_key }}/download" class="btn btn-primary">
+                        <span class="icon">↓</span> Export CSV
+                    </a>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <div class="data-card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <h3>Active Records</h3>
+                            <span class="record-count">{{ row_count }} records</span>
+                        </div>
+                        <div class="table-controls">
+                            <input type="text" class="search-input" placeholder="Search records...">
+                            <button class="icon-btn" title="Filter">▼ Filter</button>
+                            <button class="icon-btn" title="Sort">⇅ Sort</button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        {% if rows %}
+                        <table class="modern-table">
+                            <thead>
+                                <tr>
+                                    {% for col in columns %}
+                                    <th>{{ col }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in rows %}
+                                <tr>
+                                    {% for col in columns %}
+                                    <td>{{ row[col] }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <!-- Empty State / Loading State (Mock) -->
+                        <div style="padding: 40px; text-align: center;">
+                            <div class="skeleton skeleton-cell" style="width: 100%; margin-bottom: 10px;"></div>
+                            <div class="skeleton skeleton-cell" style="width: 100%; margin-bottom: 10px;"></div>
+                            <div class="skeleton skeleton-cell" style="width: 100%; margin-bottom: 10px;"></div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="card-footer">
+                        <span>Showing {{ row_count }} of {{ row_count }} records</span>
+                        <div class="pagination">
+                            <a href="#" class="page-link active">1</a>
+                            <a href="#" class="page-link">2</a>
+                            <a href="#" class="page-link">3</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

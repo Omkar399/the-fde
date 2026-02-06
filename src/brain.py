@@ -12,6 +12,7 @@ from rich.console import Console
 from src.config import Config
 from src.memory import MemoryStore
 from src.research import ResearchEngine
+from server.events import emit_event
 
 console = Console()
 
@@ -74,6 +75,7 @@ class Brain:
         unknown_columns = []
 
         # Step 1: Check memory for each column
+        emit_event("brain_thought", {"thought": "Scanning vector memory for known patterns...", "confidence": 10})
         for col in columns:
             match = self._memory.find_match(col)
             if match:
@@ -81,6 +83,7 @@ class Brain:
                     f"  [green]Memory match:[/green] '{col}' -> '{match['target_field']}' "
                     f"(distance: {match['distance']:.3f}, learned from {match['client_name']})"
                 )
+                emit_event("brain_thought", {"thought": f"Memory HIT: '{col}' matches known pattern", "confidence": 95})
                 results.append({
                     "source_column": col,
                     "target_field": match["target_field"],
@@ -96,13 +99,17 @@ class Brain:
 
         # Step 2: Research context for unknown columns
         console.print(f"  [blue]Researching {len(unknown_columns)} unknown columns...[/blue]")
+        emit_event("brain_thought", {"thought": f"Researching {len(unknown_columns)} unknown columns via You.com API...", "confidence": 30})
+        
         research_context = ""
         for col in unknown_columns[:3]:  # Limit API calls
             ctx = self._research.get_column_context(col)
             if ctx:
+                emit_event("brain_thought", {"thought": f"Context found for '{col}'", "confidence": 45})
                 research_context += f"\nContext for '{col}': {ctx}\n"
 
         # Step 3: Use Gemini to reason
+        emit_event("brain_thought", {"thought": "Gemini 1.5 Pro: Reasoning about mappings...", "confidence": 60})
         gemini_results = self._gemini_analyze(
             unknown_columns, sample_data, target_schema, research_context
         )

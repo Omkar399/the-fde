@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE FDE - Mission Control</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/scale.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-3.2.7.min.css" />
+    
+    <!-- App Styles -->
+    <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar / Header Area -->
+        <header class="app-header animate__animated animate__fadeInDown">
+            <div class="brand" id="brand-area">
+                <div class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <h1>The FDE</h1>
+                    <span class="badge badge-beta">BETA</span>
+                </div>
+            </div>
+            
+            <div class="header-controls">
+                <div class="control-panel" id="controls-area">
+                    <button class="ctrl-btn" id="btn-reset" data-tippy-content="Reset Memory">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+                        RESET
+                    </button>
+                    <div class="ctrl-divider"></div>
+                    <button class="ctrl-btn primary" id="btn-start-p1" data-tippy-content="Start Phase 1 (Novice)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        RUN PHASE 1
+                    </button>
+                    <button class="ctrl-btn primary" id="btn-start-p2" data-tippy-content="Start Phase 2 (Expert)">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                        RUN PHASE 2
+                    </button>
+                </div>
+
+                <div class="help-panel">
+                    <button class="ctrl-btn" id="btn-tour" data-tippy-content="Start Product Tour">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </button>
+                </div>
+
+                <div class="connection-status" id="status-area">
+                    <div class="neural-pulse hidden"></div>
+                    <div class="status-indicator" data-tippy-content="WebSocket Connection Status">
+                        <div class="status-dot"></div>
+                        <span class="live-text">CONNECTING</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Workspace -->
+        <main class="workspace">
+            <!-- Top Section: Neural Link & Pipeline -->
+            <div class="top-row">
+                <!-- Neural Link Visualizer -->
+                <section class="neural-section animate__animated animate__fadeInLeft" id="neural-section">
+                    <div id="particles-js"></div> <!-- Particle container -->
+                    <div class="panel-header">
+                        <h2>Neural Link</h2>
+                        <div class="activity-pulse"></div>
+                    </div>
+                    <div class="neural-visualizer" id="neural-canvas">
+                        <div class="brain-icon">
+                            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.52 2.5 2.5 0 0 1 1.03-4.19 2.5 2.5 0 0 1 4.73-2.15z"/>
+                                <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.52 2.5 2.5 0 0 0-1.03-4.19 2.5 2.5 0 0 0-4.73-2.15z"/>
+                            </svg>
+                        </div>
+                        <div class="thinking-text" id="ai-thought">Idle...</div>
+                        <div class="confidence-gauge">
+                            <div class="gauge-label">Confidence</div>
+                            <div class="gauge-bar"><div class="gauge-fill" style="width: 0%"></div></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Pipeline Visualization -->
+                <section class="pipeline-section animate__animated animate__fadeInRight" id="pipeline-section">
+                    <div class="panel-header">
+                        <h2>Execution Pipeline</h2>
+                    </div>
+                    <div class="pipeline-track">
+                        <div class="pipeline-step" id="step-scrape" data-tippy-content="Browser Automation">
+                            <div class="step-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"/></svg>
+                            </div>
+                            <span class="step-label">Scrape</span>
+                        </div>
+                        <div class="track-line"></div>
+                        <div class="pipeline-step" id="step-analyze" data-tippy-content="Gemini Reasoning">
+                            <div class="step-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                            </div>
+                            <span class="step-label">Analyze</span>
+                        </div>
+                        <div class="track-line"></div>
+                        <div class="pipeline-step" id="step-call" data-tippy-content="Plivo Voice Call">
+                            <div class="step-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+                            </div>
+                            <span class="step-label">Call</span>
+                        </div>
+                        <div class="track-line"></div>
+                        <div class="pipeline-step" id="step-learn" data-tippy-content="Memory Consolidation">
+                            <div class="step-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><path d="M8.5 8.5v.01"/><path d="M16 12v.01"/><path d="M12 16v.01"/></svg>
+                            </div>
+                            <span class="step-label">Learn</span>
+                        </div>
+                        <div class="track-line"></div>
+                        <div class="pipeline-step" id="step-deploy" data-tippy-content="Composio Action">
+                            <div class="step-icon">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            </div>
+                            <span class="step-label">Deploy</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Mission Control Grid -->
+            <section class="mission-control animate__animated animate__fadeInUp" id="mission-grid">
+                <!-- Phase 1 Card -->
+                <div class="phase-widget" id="phase-1">
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <span class="phase-tag novice">Phase 1</span>
+                            <h3>Acme Corp</h3>
+                        </div>
+                        <div class="widget-actions">
+                            <span class="status-pill">Waiting</span>
+                        </div>
+                    </div>
+                    
+                    <div class="widget-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Calls</span>
+                            <div id="chart-calls-1" class="mini-chart"></div>
+                            <span class="stat-value" id="phase-1-calls">0</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-item">
+                            <span class="stat-label">Memory</span>
+                            <div id="chart-memory-1" class="mini-chart"></div>
+                            <span class="stat-value" id="phase-1-memory">0</span>
+                        </div>
+                    </div>
+
+                    <div class="mapping-console">
+                        <div class="console-header">
+                            <span>SOURCE</span>
+                            <span>MAPPING FLOW</span>
+                            <span>TARGET</span>
+                        </div>
+                        <div class="console-body custom-scrollbar" id="phase-1-mappings">
+                            <!-- Mappings injected here -->
+                            <div class="empty-state">Waiting for agent...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Phase 2 Card -->
+                <div class="phase-widget" id="phase-2">
+                    <div class="widget-header">
+                        <div class="widget-title">
+                            <span class="phase-tag expert">Phase 2</span>
+                            <h3>Globex Inc</h3>
+                        </div>
+                        <div class="widget-actions">
+                            <span class="status-pill">Pending</span>
+                        </div>
+                    </div>
+                    
+                    <div class="widget-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Calls</span>
+                            <div id="chart-calls-2" class="mini-chart"></div>
+                            <span class="stat-value" id="phase-2-calls">0</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-item">
+                            <span class="stat-label">Memory</span>
+                            <div id="chart-memory-2" class="mini-chart"></div>
+                            <span class="stat-value" id="phase-2-memory">0</span>
+                        </div>
+                    </div>
+
+                    <div class="mapping-console">
+                        <div class="console-header">
+                            <span>SOURCE</span>
+                            <span>MAPPING FLOW</span>
+                            <span>TARGET</span>
+                        </div>
+                        <div class="console-body custom-scrollbar" id="phase-2-mappings">
+                            <!-- Mappings injected here -->
+                            <div class="empty-state">Waiting for agent...</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- System Logs -->
+            <section class="logs-section animate__animated animate__fadeInUp animate__delay-1s" id="logs-section">
+                <div class="logs-header">
+                    <h3>System Events</h3>
+                    <div class="logs-controls">
+                        <span class="dot"></span> Live Stream
+                    </div>
+                </div>
+                <div class="logs-terminal custom-scrollbar" id="event-log">
+                    <!-- Logs injected here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    
+    <!-- New Product Libs -->
+    <script src="https://cdn.jsdelivr.net/npm/driver.js@1.0.1/dist/driver.js.iife.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/notiflix@3.2.7/dist/notiflix-aio-3.2.7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tsparticles@2.11.0/tsparticles.bundle.min.js"></script>
+
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>
