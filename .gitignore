@@ -1,0 +1,15 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+
+# ChromaDB memory persistence
+data/memory/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store

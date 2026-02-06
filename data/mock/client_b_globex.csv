@@ -1,0 +1,6 @@
+customer_id,full_name,customer_level_ver2,registration_date,contact_email,mobile,street_address,city,state_code,postal_code,date_of_birth,balance_usd,last_activity,status
+2001,Maria Garcia,Premium,2023-04-10,mgarcia@globex.com,555-0201,100 Sunset Blvd,Miami,FL,33101,1992-01-25,4500.00,2024-11-01 10:00:00,active
+2002,James Lee,Standard,2023-08-05,jlee@globex.com,555-0202,200 Harbor Dr,San Diego,CA,92101,1987-06-18,1200.00,2024-10-29 13:30:00,active
+2003,Sarah Johnson,Premium,2022-12-15,sjohnson@globex.com,555-0203,300 River Rd,Chicago,IL,60601,1983-11-03,6700.50,2024-11-02 09:15:00,active
+2004,Tom Martinez,Basic,2024-01-20,tmartinez@globex.com,555-0204,400 Lake Ave,Phoenix,AZ,85001,1996-08-22,150.00,2024-08-20 07:30:00,inactive
+2005,Emily Chen,Standard,2023-09-18,echen@globex.com,555-0205,500 Hill St,Boston,MA,02101,1991-04-09,890.75,2024-10-31 15:45:00,active

@@ -1,0 +1,63 @@
+{
+  "schema_name": "SaaS CRM Onboarding Schema",
+  "description": "The canonical schema that all client data must be mapped to.",
+  "fields": {
+    "customer_id": {
+      "type": "string",
+      "description": "Unique customer identifier"
+    },
+    "full_name": {
+      "type": "string",
+      "description": "Customer's full name"
+    },
+    "subscription_tier": {
+      "type": "string",
+      "description": "Subscription level (e.g., Basic, Standard, Premium, Gold, Silver, Bronze)",
+      "enum": ["Basic", "Standard", "Premium", "Gold", "Silver", "Bronze"]
+    },
+    "signup_date": {
+      "type": "date",
+      "description": "Date the customer signed up (ISO 8601)"
+    },
+    "email": {
+      "type": "string",
+      "description": "Customer email address"
+    },
+    "phone": {
+      "type": "string",
+      "description": "Customer phone number"
+    },
+    "address": {
+      "type": "string",
+      "description": "Street address"
+    },
+    "city": {
+      "type": "string",
+      "description": "City name"
+    },
+    "state": {
+      "type": "string",
+      "description": "State code (2-letter)"
+    },
+    "zip_code": {
+      "type": "string",
+      "description": "Postal/ZIP code"
+    },
+    "date_of_birth": {
+      "type": "date",
+      "description": "Customer date of birth (ISO 8601)"
+    },
+    "account_balance": {
+      "type": "number",
+      "description": "Current account balance in USD"
+    },
+    "last_login": {
+      "type": "datetime",
+      "description": "Last login timestamp (ISO 8601)"
+    },
+    "is_active": {
+      "type": "boolean",
+      "description": "Whether the customer account is active"
+    }
+  }
+}

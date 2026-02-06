@@ -1,0 +1,6 @@
+cust_id,cust_nm,cust_lvl_v2,signup_dt,email_addr,phone_num,addr_line1,city_nm,st_cd,zip_cd,dob,acct_bal,last_login_ts,is_active_flg
+1001,John Smith,Gold,2023-01-15,john.smith@acme.com,555-0101,123 Main St,Springfield,IL,62701,1985-03-22,1500.00,2024-11-01 09:30:00,Y
+1002,Jane Doe,Silver,2023-03-20,jane.d@acme.com,555-0102,456 Oak Ave,Portland,OR,97201,1990-07-14,750.50,2024-10-28 14:15:00,Y
+1003,Bob Wilson,Gold,2022-11-08,bwilson@acme.com,555-0103,789 Pine Rd,Austin,TX,73301,1978-12-01,3200.00,2024-11-02 11:00:00,Y
+1004,Alice Brown,Bronze,2024-02-01,abrown@acme.com,555-0104,321 Elm St,Denver,CO,80201,1995-05-30,200.00,2024-09-15 08:45:00,N
+1005,Charlie Davis,Silver,2023-06-12,cdavis@acme.com,555-0105,654 Birch Ln,Seattle,WA,98101,1988-09-17,980.25,2024-10-30 16:20:00,Y
