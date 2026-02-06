@@ -20,6 +20,9 @@ from rich.panel import Panel
 from rich.text import Text
 from rich.table import Table
 
+from src.config import Config
+from server.events import emit_event, reset as reset_events
+
 console = Console()
 
 
@@ -54,6 +57,8 @@ def run_demo(reset: bool = False):
     if reset:
         console.print("[yellow]Resetting agent memory for fresh demo...[/yellow]")
         agent.reset_memory()
+        reset_events()
+        emit_event("reset", {})
         time.sleep(0.5)
 
     # ============================================================
@@ -70,10 +75,13 @@ def run_demo(reset: bool = False):
     console.print()
     input("Press Enter to start onboarding Client A (Acme Corp)...")
 
+    emit_event("phase_start", {"phase": 1, "client": "Acme Corp"})
+    portal_base = Config.WEBHOOK_BASE_URL.rstrip("/")
     summary_a = agent.onboard_client(
         client_name="Acme Corp",
-        portal_url="https://portal.acmecorp.com/data",
+        portal_url=f"{portal_base}/portal/acme",
     )
+    emit_event("phase_complete", {"phase": 1, "client": "Acme Corp"})
 
     # Show what was learned
     console.print()
@@ -101,10 +109,12 @@ def run_demo(reset: bool = False):
     console.print()
     input("Press Enter to start onboarding Client B (Globex Inc)...")
 
+    emit_event("phase_start", {"phase": 2, "client": "Globex Inc"})
     summary_b = agent.onboard_client(
         client_name="Globex Inc",
-        portal_url="https://portal.globexinc.com/data",
+        portal_url=f"{portal_base}/portal/globex",
     )
+    emit_event("phase_complete", {"phase": 2, "client": "Globex Inc"})
 
     # ============================================================
     # FINAL COMPARISON

@@ -60,7 +60,9 @@ class BrowserAgent:
         # Step 2: Send task to navigate and scrape
         task_message = (
             f"Navigate to {portal_url}. "
-            f"Find and download the customer data CSV file for {client_name}. "
+            f"This is a legacy enterprise portal. Log in with the pre-filled credentials "
+            f"(username: admin, password: admin123), then navigate to the data dashboard "
+            f"and download the customer data CSV file for {client_name}. "
             f"Return the CSV content."
         )
         console.print(f"  [cyan]AGI Browser:[/cyan] Navigating to {portal_url}...")
@@ -75,6 +77,17 @@ class BrowserAgent:
         csv_content = self._poll_for_result(headers)
         if csv_content:
             return self._parse_csv(csv_content)
+
+        # Fallback: try direct download endpoint
+        console.print("  [yellow]AGI Browser: Polling timeout, trying direct download...[/yellow]")
+        try:
+            download_url = portal_url.rstrip("/").rsplit("/", 1)[0] + "/download"
+            resp = requests.get(download_url, timeout=10)
+            if resp.status_code == 200 and "," in resp.text:
+                console.print("  [cyan]AGI Browser:[/cyan] Direct download succeeded")
+                return self._parse_csv(resp.text)
+        except Exception:
+            pass
 
         # Fallback to local
         console.print("  [yellow]AGI Browser: No CSV in response, using local file.[/yellow]")

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ client_name }} - Enterprise Data Portal</title>
+    <link rel="stylesheet" href="/static/portal.css">
+    <style>
+        .portal-header { background: {{ primary_color }}; color: #ffffff; }
+        .portal-header .subtitle { color: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="portal-wrapper">
+        <div class="portal-header">
+            <h1>{{ client_name }}</h1>
+            <div class="subtitle">Enterprise Data Portal v2.1.3</div>
+        </div>
+
+        <marquee scrollamount="3">*** SCHEDULED MAINTENANCE: Server will be down Saturday 2AM-4AM EST for Y2K patch ***</marquee>
+
+        <div class="portal-nav">
+            <a href="#">Home</a>
+            <a href="#">Support</a>
+            <a href="#">Contact IT</a>
+            <span class="construction">*** UNDER CONSTRUCTION ***</span>
+        </div>
+
+        <div class="login-container">
+            <h2>Authorized Access Only</h2>
+            <form method="POST" action="/portal/{{ client_key }}">
+                <table>
+                    <tr>
+                        <td align="right"><b>Username:</b></td>
+                        <td><input type="text" name="username" value="admin"></td>
+                    </tr>
+                    <tr>
+                        <td align="right"><b>Password:</b></td>
+                        <td><input type="password" name="password" value="admin123"></td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <input type="submit" value="  Log In  ">
+                            <br><br>
+                            <span style="font-size:10px; color:#999;">Forgot password? Contact your system administrator.</span>
+                        </td>
+                    </tr>
+                </table>
+            </form>
+        </div>
+
+        <div class="portal-footer">
+            <div>&copy; 2003 {{ client_name }}. All Rights Reserved.</div>
+            <div class="ie-notice">Best viewed in Internet Explorer 6.0 at 800x600 resolution</div>
+            <div style="margin-top:4px;">
+                Visitors: <span class="hit-counter">0048291</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

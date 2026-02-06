@@ -30,8 +30,8 @@ class ResearchEngine:
         try:
             response = requests.get(
                 Config.YOU_SEARCH_URL,
-                headers={"X-API-Key": Config.YOU_API_KEY},
-                params={"query": query},
+                headers={"X-API-Key": Config.YOU_API_KEY, "Accept": "application/json"},
+                params={"query": query, "language": "EN"},
                 timeout=10,
             )
             response.raise_for_status()

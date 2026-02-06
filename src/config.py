@@ -26,7 +26,7 @@ class Config:
 
     # You.com
     YOU_API_KEY = os.getenv("YOU_API_KEY", "")
-    YOU_SEARCH_URL = "https://api.ydc-index.io/v1/search"
+    YOU_SEARCH_URL = "https://ydc-index.io/v1/search"
 
     # Webhook server
     WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "http://localhost:5000")

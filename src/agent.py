@@ -21,6 +21,7 @@ from src.research import ResearchEngine
 from src.browser import BrowserAgent
 from src.teacher import Teacher
 from src.tools import ToolExecutor
+from server.events import emit_event
 
 console = Console()
 
@@ -67,6 +68,7 @@ class FDEAgent:
         }
 
         # === Step 1: Scrape Data ===
+        emit_event("step_start", {"step": "scrape", "message": f"Scraping data from {client_name} portal"})
         console.print("\n[bold cyan]Step 1: Fetching Client Data (AGI Inc Browser)[/bold cyan]")
         with Progress(
             SpinnerColumn(),
@@ -81,8 +83,10 @@ class FDEAgent:
         sample_data = data["sample_data"]
         rows = data["rows"]
         summary["total_columns"] = len(columns)
+        emit_event("step_complete", {"step": "scrape", "message": f"Scraped {len(rows)} rows, {len(columns)} columns"})
 
         # === Step 2: Analyze Columns ===
+        emit_event("step_start", {"step": "analyze", "message": f"Analyzing {len(columns)} columns with Gemini + You.com + Memory"})
         console.print("\n[bold cyan]Step 2: Analyzing Columns (Gemini + You.com + Memory)[/bold cyan]")
         mappings = self.brain.analyze_columns(columns, sample_data, self.target_schema)
 
@@ -102,19 +106,36 @@ class FDEAgent:
             else:
                 uncertain.append(m)
 
+        # Emit individual mapping results for dashboard
+        for m in mappings:
+            emit_event("mapping_result", {
+                "source": m["source_column"],
+                "target": m["target_field"],
+                "confidence": m["confidence"],
+                "from_memory": m.get("from_memory", False),
+            })
+        emit_event("step_complete", {"step": "analyze", "message": f"Mapped {len(mappings)} columns"})
+
         # Display mapping table
         self._display_mappings(mappings)
 
         # === Step 3: Handle Uncertain Mappings ===
         if uncertain:
+            emit_event("step_start", {"step": "call", "message": f"Calling human for {len(uncertain)} uncertain columns"})
             console.print(
                 f"\n[bold cyan]Step 3: Asking Human ({len(uncertain)} uncertain columns) "
                 f"(Plivo Voice)[/bold cyan]"
             )
             for m in uncertain:
+                emit_event("phone_call", {"column": m["source_column"], "mapping": m["target_field"]})
                 human_result = self.teacher.ask_human(
                     m["source_column"], m["target_field"]
                 )
+                emit_event("phone_response", {
+                    "column": m["source_column"],
+                    "mapping": m["target_field"],
+                    "confirmed": human_result["confirmed"],
+                })
                 if human_result["confirmed"]:
                     m["confidence"] = "high"
                     m["reasoning"] = f"Human confirmed via {human_result['method']}"
@@ -125,13 +146,17 @@ class FDEAgent:
                         f"  [yellow]Skipping '{m['source_column']}' "
                         f"(human rejected mapping)[/yellow]"
                     )
+            emit_event("step_complete", {"step": "call", "message": f"Human confirmed {summary['human_confirmed']} mappings"})
         else:
+            emit_event("step_start", {"step": "call", "message": "No uncertain columns — skipping phone calls"})
             console.print(
                 "\n[bold cyan]Step 3: No uncertain columns! "
                 "[green]All mapped from memory/AI.[/green][/bold cyan]"
             )
+            emit_event("step_complete", {"step": "call", "message": "No phone calls needed!"})
 
         # === Step 4: Store New Learnings ===
+        emit_event("step_start", {"step": "learn", "message": "Storing new mappings in vector memory"})
         console.print("\n[bold cyan]Step 4: Updating Memory (Continual Learning)[/bold cyan]")
         new_learnings = 0
         for m in confident:
@@ -141,6 +166,7 @@ class FDEAgent:
                 )
                 new_learnings += 1
         summary["new_learnings"] = new_learnings
+        emit_event("memory_update", {"count": new_learnings, "total": self.memory.count})
 
         if new_learnings == 0:
             console.print("  [dim]No new learnings needed (all from memory).[/dim]")
@@ -148,11 +174,19 @@ class FDEAgent:
             console.print(
                 f"  [green]Stored {new_learnings} new mappings in vector memory.[/green]"
             )
+        emit_event("step_complete", {"step": "learn", "message": f"Stored {new_learnings} new mappings"})
 
         # === Step 5: Deploy ===
+        emit_event("step_start", {"step": "deploy", "message": f"Deploying {len(confident)} mappings via Composio"})
         console.print("\n[bold cyan]Step 5: Deploying Mapped Data (Composio)[/bold cyan]")
         deploy_result = self.tools.deploy_mapping(client_name, confident, rows)
         summary["deployed"] = deploy_result["success"]
+        emit_event("deploy_complete", {
+            "records": deploy_result.get("records_deployed", 0),
+            "target": "Google Sheets",
+            "url": deploy_result.get("url", ""),
+        })
+        emit_event("step_complete", {"step": "deploy", "message": f"Deployed {deploy_result.get('records_deployed', 0)} records"})
 
         # === Summary ===
         self._display_summary(summary)

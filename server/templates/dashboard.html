@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE FDE - Live Pipeline Dashboard</title>
+    <link rel="stylesheet" href="/static/dashboard.css">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title"><span>THE FDE</span> — Live Pipeline</div>
+            <div class="live-badge">
+                <div class="live-dot"></div>
+                <span class="live-text">CONNECTING</span>
+            </div>
+        </div>
+
+        <!-- Pipeline Steps -->
+        <div class="pipeline">
+            <div class="pipeline-step">
+                <div class="step-circle" id="step-scrape">1</div>
+                <span class="step-label">Scrape</span>
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step">
+                <div class="step-circle" id="step-analyze">2</div>
+                <span class="step-label">Analyze</span>
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step">
+                <div class="step-circle" id="step-call">3</div>
+                <span class="step-label">Call</span>
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step">
+                <div class="step-circle" id="step-learn">4</div>
+                <span class="step-label">Learn</span>
+            </div>
+            <span class="pipeline-arrow">→</span>
+            <div class="pipeline-step">
+                <div class="step-circle" id="step-deploy">5</div>
+                <span class="step-label">Deploy</span>
+            </div>
+        </div>
+
+        <!-- Main Content: Two Phase Cards -->
+        <div class="main-content">
+            <!-- Phase 1: Novice -->
+            <div class="phase-card" id="phase-1">
+                <div class="phase-header">
+                    <span class="phase-title">Phase 1: Novice</span>
+                    <span class="phase-client">Acme Corp</span>
+                </div>
+                <div class="phase-stats">
+                    <div class="stat">
+                        <span class="stat-value calls-good" id="phase-1-calls">0</span>
+                        <span class="stat-label">Phone Calls</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="phase-1-memory">0</span>
+                        <span class="stat-label">Memory Hits</span>
+                    </div>
+                </div>
+                <div class="mapping-header">
+                    <span>Source</span>
+                    <span></span>
+                    <span>Target</span>
+                    <span>Via</span>
+                </div>
+                <div class="mapping-table" id="phase-1-mappings"></div>
+            </div>
+
+            <!-- Phase 2: Expert -->
+            <div class="phase-card" id="phase-2">
+                <div class="phase-header">
+                    <span class="phase-title">Phase 2: Expert</span>
+                    <span class="phase-client">Globex Inc</span>
+                </div>
+                <div class="phase-stats">
+                    <div class="stat">
+                        <span class="stat-value calls-good" id="phase-2-calls">0</span>
+                        <span class="stat-label">Phone Calls</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-value" id="phase-2-memory">0</span>
+                        <span class="stat-label">Memory Hits</span>
+                    </div>
+                </div>
+                <div class="mapping-header">
+                    <span>Source</span>
+                    <span></span>
+                    <span>Target</span>
+                    <span>Via</span>
+                </div>
+                <div class="mapping-table" id="phase-2-mappings"></div>
+            </div>
+        </div>
+
+        <!-- Event Log -->
+        <div class="event-log" id="event-log"></div>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
+</body>
+</html>

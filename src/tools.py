@@ -16,11 +16,18 @@ class ToolExecutor:
     """Composio-based tool execution for deploying mapped data."""
 
     def __init__(self):
-        self._toolset = None
+        self._client = None
+        self._connected_account = None
         if not Config.DEMO_MODE:
             try:
-                from composio_gemini import ComposioToolSet
-                self._toolset = ComposioToolSet(api_key=Config.COMPOSIO_API_KEY)
+                from composio import Composio
+                self._client = Composio(api_key=Config.COMPOSIO_API_KEY)
+                # Get the first connected Google Sheets account
+                conns = self._client.connected_accounts.get()
+                for c in conns:
+                    if c.appName == "googlesheets" and c.status == "ACTIVE":
+                        self._connected_account = c.id
+                        break
             except Exception as e:
                 console.print(f"  [yellow]Composio init warning: {e}[/yellow]")
 
@@ -46,24 +53,64 @@ class ToolExecutor:
 
     def _composio_deploy(self, client_name: str, mappings: list[dict], rows: list[dict]) -> dict:
         """Deploy using Composio tool execution."""
+        from composio.client.enums import Action
+
         # Transform data using the mappings
         transformed = self._transform_data(mappings, rows)
 
         console.print(f"  [cyan]Composio:[/cyan] Deploying {len(transformed)} records...")
 
-        if self._toolset:
-            # Execute via Composio - e.g., Google Sheets batch update
-            from composio_gemini import Action
-            response = self._toolset.execute_action(
+        if self._client and self._connected_account:
+            # Step 1: Create a spreadsheet for this client
+            console.print(f"  [cyan]Composio:[/cyan] Creating spreadsheet for {client_name}...")
+            create_result = self._client.actions.execute(
+                action=Action.GOOGLESHEETS_CREATE_GOOGLE_SHEET1,
+                params={"title": f"FDE - {client_name} Onboarding"},
+                entity_id="default",
+                connected_account=self._connected_account,
+            )
+
+            # Extract spreadsheet ID
+            spreadsheet_id = None
+            def _find_key(d, key):
+                if isinstance(d, dict):
+                    if key in d:
+                        return d[key]
+                    for v in d.values():
+                        r = _find_key(v, key)
+                        if r:
+                            return r
+                return None
+            spreadsheet_id = _find_key(create_result, "spreadsheetId")
+
+            if not spreadsheet_id:
+                raise RuntimeError(f"Could not create spreadsheet: {create_result}")
+
+            # Step 2: Write data as 2D array (header + rows)
+            if transformed:
+                headers = list(transformed[0].keys())
+                values = [headers] + [[row.get(h, "") for h in headers] for row in transformed]
+            else:
+                values = [["No data"]]
+
+            console.print(f"  [cyan]Composio:[/cyan] Writing {len(transformed)} records to Google Sheets...")
+            write_result = self._client.actions.execute(
                 action=Action.GOOGLESHEETS_BATCH_UPDATE,
                 params={
-                    "data": transformed,
-                    "client_name": client_name,
+                    "spreadsheet_id": spreadsheet_id,
+                    "sheet_name": "Sheet1",
+                    "values": values,
+                    "first_cell_location": "A1",
+                    "valueInputOption": "USER_ENTERED",
                 },
+                entity_id="default",
+                connected_account=self._connected_account,
             )
-            success = response.get("success", False) if isinstance(response, dict) else True
+            success = write_result.get("successfull", False)
+            sheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+            console.print(f"  [cyan]Composio:[/cyan] Sheet URL: {sheet_url}")
         else:
-            success = True
+            success = False
 
         if success:
             console.print(
