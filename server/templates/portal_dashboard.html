@@ -1,138 +1,90 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ client_name }} - Data Portal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>{{ client_name }} - Data Export Dashboard</title>
     <link rel="stylesheet" href="/static/portal.css">
     <style>
-        :root {
-            --brand-color: {{ primary_color }};
-        }
+        .portal-header { background: {{ primary_color }}; color: #ffffff; }
+        .portal-header .subtitle { color: #ccc; }
     </style>
 </head>
-<body class="dashboard-page">
-    <div class="layout-wrapper">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="client-avatar" style="background-color: {{ primary_color }}">
-                    {{ client_name[0] }}
-                </div>
-                <div class="client-info">
-                    <div class="client-name">{{ client_name }}</div>
-                    <div class="client-plan">Enterprise</div>
+<body>
+    <div class="portal-wrapper">
+        <div class="portal-header">
+            <h1>{{ client_name }}</h1>
+            <div class="subtitle">Enterprise Data Portal v2.1.3</div>
+        </div>
+
+        <div class="portal-nav">
+            <a href="/portal/{{ client_key }}">Home</a>
+            <a href="/portal/{{ client_key }}/dashboard">Data Export</a>
+            <a href="#">Reports</a>
+            <a href="#">Admin Panel</a>
+            <span style="float:right; font-size:11px; color:#666;">Logged in as: <b>admin</b></span>
+        </div>
+
+        <div class="portal-content">
+            <div class="portal-sidebar">
+                <h3>Navigation</h3>
+                <ul>
+                    <li><a href="/portal/{{ client_key }}/dashboard">Customer Data</a></li>
+                    <li><a href="#">Invoices</a></li>
+                    <li><a href="#">Reports</a></li>
+                    <li><a href="#">Settings</a></li>
+                </ul>
+                <br>
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="/portal/{{ client_key }}/download">Download CSV</a></li>
+                    <li><a href="#">Print View</a></li>
+                </ul>
+                <br>
+                <div style="font-size:9px; color:#999; border-top:1px solid #ccc; padding-top:5px;">
+                    Last backup:<br>
+                    11/15/2003 02:30 AM
                 </div>
             </div>
 
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <div class="nav-label">Overview</div>
-                    <a href="/portal/{{ client_key }}" class="nav-item">
-                        <span class="nav-icon">⌂</span> Home
-                    </a>
-                    <a href="/portal/{{ client_key }}/dashboard" class="nav-item active">
-                        <span class="nav-icon">📊</span> Customer Data
-                    </a>
-                    <a href="#" class="nav-item">
-                        <span class="nav-icon">📑</span> Reports
-                    </a>
-                </div>
+            <div class="portal-main">
+                <h2>Customer Data Export</h2>
+                <p style="font-size:12px; color:#666;">
+                    Showing {{ row_count }} records | Last updated: {{ last_updated }}
+                </p>
 
-                <div class="nav-section">
-                    <div class="nav-label">Settings</div>
-                    <a href="#" class="nav-item">
-                        <span class="nav-icon">⚙️</span> Configuration
-                    </a>
-                    <a href="#" class="nav-item">
-                        <span class="nav-icon">🔒</span> Access Control
-                    </a>
-                </div>
-            </nav>
+                <a class="download-btn" href="/portal/{{ client_key }}/download">
+                    &#128190; Download as CSV
+                </a>
 
-            <div class="sidebar-footer">
-                <div class="user-profile">
-                    <div class="user-avatar">A</div>
-                    <div class="user-details">
-                        <div class="user-name">Admin User</div>
-                        <div class="user-role">Administrator</div>
-                    </div>
-                </div>
+                <table class="data-table" border="1" cellpadding="2" cellspacing="0">
+                    <thead>
+                        <tr>
+                            {% for col in columns %}
+                            <th>{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                        <tr>
+                            {% for col in columns %}
+                            <td>{{ row[col] }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <br>
+                <p style="font-size:10px; color:#999;">
+                    Export generated by DataBridge Enterprise v4.2 &mdash; Licensed to {{ client_name }}
+                </p>
             </div>
-        </aside>
+        </div>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="top-bar">
-                <h2 class="page-title">Customer Data Export</h2>
-                <div class="top-actions">
-                    <button class="btn btn-secondary">
-                        <span class="icon">↺</span> Refresh
-                    </button>
-                    <a href="/portal/{{ client_key }}/download" class="btn btn-primary">
-                        <span class="icon">↓</span> Export CSV
-                    </a>
-                </div>
-            </header>
-
-            <div class="content-area">
-                <div class="data-card">
-                    <div class="card-header">
-                        <div class="card-title">
-                            <h3>Active Records</h3>
-                            <span class="record-count">{{ row_count }} records</span>
-                        </div>
-                        <div class="table-controls">
-                            <input type="text" class="search-input" placeholder="Search records...">
-                            <button class="icon-btn" title="Filter">▼ Filter</button>
-                            <button class="icon-btn" title="Sort">⇅ Sort</button>
-                        </div>
-                    </div>
-
-                    <div class="table-container">
-                        {% if rows %}
-                        <table class="modern-table">
-                            <thead>
-                                <tr>
-                                    {% for col in columns %}
-                                    <th>{{ col }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in rows %}
-                                <tr>
-                                    {% for col in columns %}
-                                    <td>{{ row[col] }}</td>
-                                    {% endfor %}
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        {% else %}
-                        <!-- Empty State / Loading State (Mock) -->
-                        <div style="padding: 40px; text-align: center;">
-                            <div class="skeleton skeleton-cell" style="width: 100%; margin-bottom: 10px;"></div>
-                            <div class="skeleton skeleton-cell" style="width: 100%; margin-bottom: 10px;"></div>
-                            <div class="skeleton skeleton-cell" style="width: 100%; margin-bottom: 10px;"></div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="card-footer">
-                        <span>Showing {{ row_count }} of {{ row_count }} records</span>
-                        <div class="pagination">
-                            <a href="#" class="page-link active">1</a>
-                            <a href="#" class="page-link">2</a>
-                            <a href="#" class="page-link">3</a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+        <div class="portal-footer">
+            <div>&copy; 2003 {{ client_name }}. All Rights Reserved.</div>
+            <div class="ie-notice">Best viewed in Internet Explorer 6.0 at 800x600 resolution</div>
+        </div>
     </div>
 </body>
 </html>

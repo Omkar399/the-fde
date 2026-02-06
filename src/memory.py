@@ -20,10 +20,21 @@ class MemoryStore:
     def __init__(self):
         os.makedirs(Config.MEMORY_DIR, exist_ok=True)
         self._client = chromadb.PersistentClient(path=Config.MEMORY_DIR)
-        self._collection = self._client.get_or_create_collection(
-            name="column_mappings",
-            metadata={"hnsw:space": "cosine"},
-        )
+        try:
+            self._collection = self._client.get_or_create_collection(
+                name="column_mappings",
+                metadata={"hnsw:space": "cosine"},
+            )
+        except Exception:
+            # Stale collection on disk — wipe and recreate
+            try:
+                self._client.delete_collection("column_mappings")
+            except Exception:
+                pass
+            self._collection = self._client.create_collection(
+                name="column_mappings",
+                metadata={"hnsw:space": "cosine"},
+            )
 
     def store_mapping(self, source_column: str, target_field: str, client_name: str) -> None:
         """Store a learned mapping: source column name -> target schema field."""
@@ -96,11 +107,12 @@ class MemoryStore:
 
     def clear(self) -> None:
         """Clear all stored mappings (for demo reset)."""
-        self._client.delete_collection("column_mappings")
-        self._collection = self._client.get_or_create_collection(
-            name="column_mappings",
-            metadata={"hnsw:space": "cosine"},
-        )
+        # Remove all documents instead of deleting/recreating the collection
+        # to avoid stale UUID references in ChromaDB's PersistentClient.
+        if self._collection.count() > 0:
+            all_ids = self._collection.get()["ids"]
+            if all_ids:
+                self._collection.delete(ids=all_ids)
         console.print("  [yellow]Memory cleared.[/yellow]")
 
     @property
