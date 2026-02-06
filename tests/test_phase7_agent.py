@@ -185,4 +185,4 @@ class TestDemoMode:
     def test_all_components_use_mock_in_demo(self, agent):
         """In demo mode, Brain client is None and ToolExecutor toolset is None."""
         assert agent.brain._client is None
-        assert agent.tools._toolset is None
+        assert agent.tools._client is None

@@ -35,7 +35,7 @@ class TestConfigValues:
 
     def test_you_search_url_is_valid(self):
         """YOU_SEARCH_URL points to the You.com API."""
-        assert Config.YOU_SEARCH_URL == "https://api.ydc-index.io/v1/search"
+        assert Config.YOU_SEARCH_URL == "https://ydc-index.io/v1/search"
 
     def test_agi_base_url_is_valid(self):
         """AGI_BASE_URL points to the AGI API."""

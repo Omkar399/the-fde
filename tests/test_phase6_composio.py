@@ -44,7 +44,7 @@ def sample_rows():
 class TestToolExecutorInit:
     def test_demo_mode_toolset_is_none(self, executor):
         """In demo mode, _toolset is None (no Composio import attempted)."""
-        assert executor._toolset is None
+        assert executor._client is None
 
 
 # ---------------------------------------------------------------------------
