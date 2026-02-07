@@ -1,8 +1,7 @@
 """Phase 7 tests: run_demo.py -- imports, argument parsing, demo flow."""
 import os
 import sys
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 os.environ["DEMO_MODE"] = "true"
 
@@ -60,13 +59,14 @@ class TestDemoFlow:
 
     @patch("builtins.input", return_value="")
     def test_continual_learning_demo_assertion(self, mock_input):
-        """The key demo assertion: Client B needs fewer human calls than Client A."""
+        """The key demo assertion: each successive client needs fewer human calls."""
         from src.agent import FDEAgent
         agent = FDEAgent()
         agent.reset_memory()
 
         summary_a = agent.onboard_client("Acme Corp", "https://portal.acmecorp.com/data")
         summary_b = agent.onboard_client("Globex Inc", "https://portal.globexinc.com/data")
+        summary_c = agent.onboard_client("Initech Ltd", "https://portal.initech.com/data")
 
         # THE KEY ASSERTION: continual learning reduces human calls
         assert summary_b["human_confirmed"] <= summary_a["human_confirmed"], (
@@ -77,6 +77,16 @@ class TestDemoFlow:
         assert summary_b["from_memory"] > summary_a["from_memory"], (
             f"Client B should use more memory matches than Client A. "
             f"A={summary_a['from_memory']}, B={summary_b['from_memory']}"
+        )
+        # Client C should also benefit from accumulated memory
+        assert summary_c["from_memory"] > 0, (
+            f"Client C should have memory matches from prior clients. "
+            f"C={summary_c['from_memory']}"
+        )
+        assert summary_c["human_confirmed"] <= summary_a["human_confirmed"], (
+            f"Client C needed {summary_c['human_confirmed']} human calls "
+            f"but Client A needed {summary_a['human_confirmed']}. "
+            f"Learning should reduce this."
         )
         agent.reset_memory()
 
@@ -113,3 +123,13 @@ class TestDemoArgParsing:
         parser.add_argument("--demo-mode", action="store_true")
         args = parser.parse_args(["--demo-mode"])
         assert args.demo_mode is True
+
+    def test_argparse_auto_flag(self):
+        """--auto sets auto=True for auto-pacing mode."""
+        import argparse
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--reset", action="store_true")
+        parser.add_argument("--demo-mode", action="store_true")
+        parser.add_argument("--auto", action="store_true")
+        args = parser.parse_args(["--auto"])
+        assert args.auto is True

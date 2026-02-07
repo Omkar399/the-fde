@@ -136,25 +136,6 @@ class FDEAgent:
         self._display_mappings(mappings)
 
         # === Step 3: Handle Uncertain Mappings ===
-        # For the first client (Novice phase: no prior memory), always verify at
-        # least one field with a phone call so the demo shows the human-in-the-loop.
-        is_novice = summary["from_memory"] == 0
-
-        if not uncertain and is_novice and confident:
-            # No uncertain fields but this is the first client — demote the
-            # least-obvious non-memory mapping to uncertain so we make 1 call.
-            # Prefer fields that weren't from memory; pick the last one added.
-            demote = None
-            for m in reversed(confident):
-                if not m.get("from_memory"):
-                    demote = m
-                    break
-            if demote:
-                confident.remove(demote)
-                summary["auto_mapped"] -= 1
-                demote["confidence"] = "low"
-                uncertain.append(demote)
-
         # Only call for the single most uncertain field; auto-accept the rest
         if uncertain:
             call_target = uncertain[0]
@@ -186,9 +167,13 @@ class FDEAgent:
                 summary["human_confirmed"] += 1
             else:
                 console.print(
-                    f"  [yellow]Skipping '{call_target['source_column']}' "
-                    f"(human rejected mapping)[/yellow]"
+                    f"  [yellow]Human rejected '{call_target['source_column']}' "
+                    f"-> '{call_target['target_field']}'. "
+                    f"Flagged for manual review, auto-accepting at medium confidence.[/yellow]"
                 )
+                call_target["confidence"] = "medium"
+                call_target["reasoning"] = "Flagged for manual review"
+                confident.append(call_target)
             emit_event("step_complete", {"step": "call", "message": f"Human confirmed {summary['human_confirmed']} mappings"})
         else:
             emit_event("step_start", {"step": "call", "message": "No uncertain columns — skipping phone calls"})

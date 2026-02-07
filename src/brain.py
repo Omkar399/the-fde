@@ -101,7 +101,7 @@ class Brain:
         # Step 2: Research context for unknown columns
         console.print(f"  [blue]Researching {len(unknown_columns)} unknown columns...[/blue]")
         emit_event("brain_thought", {"thought": f"Researching {len(unknown_columns)} unknown columns via You.com API...", "confidence": 30})
-        
+
         research_context = ""
         for col in unknown_columns[:3]:  # Limit API calls
             ctx = self._research.get_column_context(col)
@@ -207,6 +207,20 @@ Only rate a column "low" if it is truly ambiguous and the target field cannot be
             "last_activity": ("last_login", "high"),
             "is_active_flg": ("is_active", "high"),
             "status": ("is_active", "high"),
+            "client_ref": ("customer_id", "high"),
+            "display_name": ("full_name", "high"),
+            "tier_level": ("subscription_tier", "medium"),
+            "join_date": ("signup_date", "high"),
+            "email_address": ("email", "high"),
+            "phone_number": ("phone", "high"),
+            "mailing_addr": ("address", "high"),
+            "location_city": ("city", "high"),
+            "location_state": ("state", "high"),
+            "zip": ("zip_code", "high"),
+            "birth_date": ("date_of_birth", "high"),
+            "balance": ("account_balance", "medium"),
+            "latest_login": ("last_login", "high"),
+            "active_flag": ("is_active", "high"),
         }
         results = []
         for col in columns:

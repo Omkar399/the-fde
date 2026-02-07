@@ -1,6 +1,5 @@
 """Phase 2 Teammate B tests: You.com research engine."""
 import os
-import pytest
 
 os.environ["DEMO_MODE"] = "true"
 

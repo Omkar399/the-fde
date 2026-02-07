@@ -1,11 +1,19 @@
 """Phase 6 tests: Composio ToolExecutor -- deploy mapping and data transformation."""
+import json
 import os
 import pytest
-from unittest.mock import patch, MagicMock
 
 os.environ["DEMO_MODE"] = "true"
 
 from src.tools import ToolExecutor
+
+
+@pytest.fixture
+def target_schema():
+    """Load the real target schema."""
+    schema_path = os.path.join(os.path.dirname(__file__), "..", "data", "target_schema.json")
+    with open(schema_path) as f:
+        return json.load(f)
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +74,7 @@ class TestToolExecutorDeploy:
         assert result["records_deployed"] == 0
 
     def test_deploy_result_has_required_keys(self, executor, sample_mappings, sample_rows):
-        """Result dict always contains success, records_deployed, message."""
+        """Result dict always contains success, records_deployed, message, validation keys."""
         result = executor.deploy_mapping("TestCorp", sample_mappings, sample_rows)
         assert "success" in result
         assert "records_deployed" in result
@@ -74,6 +82,10 @@ class TestToolExecutorDeploy:
         assert isinstance(result["success"], bool)
         assert isinstance(result["records_deployed"], int)
         assert isinstance(result["message"], str)
+        assert "validation_warnings" in result
+        assert "transformations_applied" in result
+        assert isinstance(result["validation_warnings"], int)
+        assert isinstance(result["transformations_applied"], int)
 
 
 # ---------------------------------------------------------------------------
@@ -178,6 +190,156 @@ class TestToolExecutorTransform:
         assert row["subscription_tier"] == "Gold"
         assert row["email"] == "john.smith@acme.com"
         assert row["state"] == "IL"
+        # Without schema, no coercion: "Y" stays as string
         assert row["is_active"] == "Y"
         # Verify all 14 target fields present
         assert len(row) == 14
+
+
+# ---------------------------------------------------------------------------
+# TestTypeCoercion
+# ---------------------------------------------------------------------------
+
+class TestTypeCoercion:
+    """Tests for type coercion when a target_schema is provided."""
+
+    # -- Boolean coercion --
+
+    @pytest.mark.parametrize("input_val,expected", [
+        ("Y", True), ("y", True), ("yes", True), ("Yes", True), ("YES", True),
+        ("1", True), ("true", True), ("True", True), ("TRUE", True),
+        ("active", True), ("Active", True),
+        ("N", False), ("n", False), ("no", False), ("No", False), ("NO", False),
+        ("0", False), ("false", False), ("False", False), ("FALSE", False),
+        ("inactive", False), ("Inactive", False),
+    ])
+    def test_boolean_coercion(self, executor, target_schema, input_val, expected):
+        """Boolean strings are coerced to Python bool."""
+        mappings = [{"source_column": "flag", "target_field": "is_active"}]
+        rows = [{"flag": input_val}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["is_active"] is expected
+        assert len(executor._validation_warnings) == 0
+
+    def test_boolean_invalid_generates_warning(self, executor, target_schema):
+        """Non-boolean string keeps original value and generates a warning."""
+        mappings = [{"source_column": "flag", "target_field": "is_active"}]
+        rows = [{"flag": "maybe"}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["is_active"] == "maybe"
+        assert len(executor._validation_warnings) == 1
+        assert executor._validation_warnings[0]["expected_type"] == "boolean"
+
+    # -- Date coercion --
+
+    @pytest.mark.parametrize("input_val,expected", [
+        ("2023-01-15", "2023-01-15"),
+        ("01/15/2023", "2023-01-15"),
+        ("Jan 15, 2023", "2023-01-15"),
+        ("15-Jan-2023", "2023-01-15"),
+    ])
+    def test_date_normalization(self, executor, target_schema, input_val, expected):
+        """Various date formats are normalized to ISO 8601."""
+        mappings = [{"source_column": "dt", "target_field": "signup_date"}]
+        rows = [{"dt": input_val}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["signup_date"] == expected
+        assert len(executor._validation_warnings) == 0
+
+    def test_date_invalid_generates_warning(self, executor, target_schema):
+        """Unparseable date keeps original and generates a warning."""
+        mappings = [{"source_column": "dt", "target_field": "signup_date"}]
+        rows = [{"dt": "not-a-date"}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["signup_date"] == "not-a-date"
+        assert len(executor._validation_warnings) == 1
+        assert executor._validation_warnings[0]["expected_type"] == "date"
+
+    # -- Datetime coercion --
+
+    @pytest.mark.parametrize("input_val,expected", [
+        ("2024-11-01T09:30:00", "2024-11-01T09:30:00"),
+        ("2024-11-01 09:30:00", "2024-11-01T09:30:00"),
+    ])
+    def test_datetime_normalization(self, executor, target_schema, input_val, expected):
+        """Datetime strings are normalized to ISO 8601 with T separator."""
+        mappings = [{"source_column": "ts", "target_field": "last_login"}]
+        rows = [{"ts": input_val}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["last_login"] == expected
+        assert len(executor._validation_warnings) == 0
+
+    def test_datetime_invalid_generates_warning(self, executor, target_schema):
+        """Unparseable datetime keeps original and generates a warning."""
+        mappings = [{"source_column": "ts", "target_field": "last_login"}]
+        rows = [{"ts": "yesterday"}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["last_login"] == "yesterday"
+        assert len(executor._validation_warnings) == 1
+        assert executor._validation_warnings[0]["expected_type"] == "datetime"
+
+    # -- Number coercion --
+
+    @pytest.mark.parametrize("input_val,expected", [
+        ("1500.00", 1500.0),
+        ("$1,500.00", 1500.0),
+        ("1,500", 1500.0),
+        ("750.50", 750.5),
+        ("0", 0.0),
+    ])
+    def test_number_coercion(self, executor, target_schema, input_val, expected):
+        """Numeric strings (with $, commas) are coerced to float."""
+        mappings = [{"source_column": "bal", "target_field": "account_balance"}]
+        rows = [{"bal": input_val}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["account_balance"] == expected
+        assert len(executor._validation_warnings) == 0
+
+    def test_number_invalid_generates_warning(self, executor, target_schema):
+        """Non-numeric string keeps original and generates a warning."""
+        mappings = [{"source_column": "bal", "target_field": "account_balance"}]
+        rows = [{"bal": "N/A"}]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0]["account_balance"] == "N/A"
+        assert len(executor._validation_warnings) == 1
+        assert executor._validation_warnings[0]["expected_type"] == "number"
+
+    # -- Backward compatibility --
+
+    def test_no_schema_skips_coercion(self, executor):
+        """Without target_schema, values pass through unchanged."""
+        mappings = [
+            {"source_column": "flag", "target_field": "is_active"},
+            {"source_column": "bal", "target_field": "account_balance"},
+        ]
+        rows = [{"flag": "Y", "bal": "$1,500.00"}]
+        result = executor._transform_data(mappings, rows)
+        assert result[0]["is_active"] == "Y"
+        assert result[0]["account_balance"] == "$1,500.00"
+        assert len(executor._validation_warnings) == 0
+
+    # -- Multi-field, multi-row --
+
+    def test_mixed_coercion_multiple_rows(self, executor, target_schema):
+        """Multiple types coerced correctly across multiple rows."""
+        mappings = [
+            {"source_column": "flag", "target_field": "is_active"},
+            {"source_column": "bal", "target_field": "account_balance"},
+            {"source_column": "dt", "target_field": "signup_date"},
+        ]
+        rows = [
+            {"flag": "Y", "bal": "$1,500.00", "dt": "01/15/2023"},
+            {"flag": "N", "bal": "750.50", "dt": "Jan 15, 2023"},
+        ]
+        result = executor._transform_data(mappings, rows, target_schema)
+        assert result[0] == {"is_active": True, "account_balance": 1500.0, "signup_date": "2023-01-15"}
+        assert result[1] == {"is_active": False, "account_balance": 750.5, "signup_date": "2023-01-15"}
+        assert len(executor._validation_warnings) == 0
+
+    def test_warnings_track_row_index(self, executor, target_schema):
+        """Validation warnings include the correct row index."""
+        mappings = [{"source_column": "flag", "target_field": "is_active"}]
+        rows = [{"flag": "Y"}, {"flag": "maybe"}, {"flag": "N"}]
+        executor._transform_data(mappings, rows, target_schema)
+        assert len(executor._validation_warnings) == 1
+        assert executor._validation_warnings[0]["row"] == 1

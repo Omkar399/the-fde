@@ -1,0 +1,6 @@
+client_ref,display_name,tier_level,join_date,email_address,phone_number,mailing_addr,location_city,location_state,zip,birth_date,balance,latest_login,active_flag
+3001,Michael Torres,Gold,03/15/2023,mtorres@initech.com,555-0301,700 Tech Park Dr,San Jose,CA,95101,06/22/1989,$3200.00,2024-11-01T08:45:00,true
+3002,Lisa Wang,Silver,08/20/2023,lwang@initech.com,555-0302,800 Innovation Way,Palo Alto,CA,94301,Mar 12 1994,$1100.50,2024-10-30T12:00:00,true
+3003,David Kim,Gold,12/01/2022,dkim@initech.com,555-0303,900 Valley Blvd,Cupertino,CA,95014,11/30/1985,$5800.00,2024-11-02T10:30:00,true
+3004,Rachel Green,Bronze,01/25/2024,rgreen@initech.com,555-0304,100 Startup Ln,Mountain View,CA,94040,Aug 8 1997,$275.00,2024-08-15T06:30:00,false
+3005,Kevin Patel,Silver,09/05/2023,kpatel@initech.com,555-0305,200 Campus Dr,Sunnyvale,CA,94085,04/17/1991,$950.75,2024-10-31T14:15:00,true
