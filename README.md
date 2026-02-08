@@ -374,11 +374,14 @@ The_FDE/
 
 ## 🏅 Awards & Recognition
 
-- 🥇 **Best Use of AGI API** ($1,000)
-- 🥇 **Best Voice Agent using Plivo** ($250 + $250 credits)
-- 🥇 **Composio Best Use** ($1,000)
-- 🥇 **Best Use of You.com APIs** ($50 gift card + $200 credits)
-- 🥇 **Overall Hackathon Winner** (Continual Learning Track)
+### 🏆 Winner
+- 🥇 **Best Use of AGI API** — **WINNER** ($1,000 prize)
+
+### 🎯 Top Contenders
+- 🥈 **Best Voice Agent using Plivo** — Top Contender
+- 🥈 **Best Use of AGI API** — Top Contender (Won!)
+
+*Built in 8 hours at the Continual Learning Hackathon 2025*
 
 ---
 
