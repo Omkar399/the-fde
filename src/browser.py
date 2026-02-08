@@ -9,6 +9,8 @@ import csv
 import io
 import time
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from rich.console import Console
 
 from src.config import Config
@@ -16,12 +18,29 @@ from server.events import emit_event
 
 console = Console()
 
+MAX_POLL_SECONDS = 180
+POLL_INTERVAL_SECS = 2.0
+
+
+def _mk_session() -> requests.Session:
+    """Create a requests Session with automatic retries (matches AGI reference)."""
+    s = requests.Session()
+    retries = Retry(total=5, backoff_factor=0.3, status_forcelist=[429, 500, 502, 503, 504])
+    s.mount("http://", HTTPAdapter(max_retries=retries))
+    s.mount("https://", HTTPAdapter(max_retries=retries))
+    return s
+
+
+DEFAULT_AGENT_NAME = "agi-0"
+
 
 class BrowserAgent:
     """AGI Inc browser automation for scraping client portals."""
 
     def __init__(self):
         self._session_id = None
+        self._http = _mk_session()
+        self._agent_name = DEFAULT_AGENT_NAME
 
     def scrape_client_data(self, client_name: str, portal_url: str, credentials: dict | None = None) -> dict:
         """Scrape CSV data from a client portal.
@@ -43,21 +62,107 @@ class BrowserAgent:
             console.print(f"  [yellow]AGI Browser failed: {e}. Using local fallback.[/yellow]")
             return self._mock_scrape(client_name)
 
+    def _build_headers(self) -> dict:
+        """Build API headers matching the AGI reference client."""
+        headers = {"Accept": "application/json"}
+        if Config.AGI_API_KEY:
+            headers["Authorization"] = f"Bearer {Config.AGI_API_KEY}"
+        return headers
+
+    def _discover_agent(self, headers: dict) -> str:
+        """Query /v1/models and pick the best available agent.
+
+        Prefers a 'fast' variant if available, otherwise falls back to DEFAULT_AGENT_NAME
+        or the first model returned by the API.
+        """
+        try:
+            resp = self._http.get(
+                f"{Config.AGI_BASE_URL}/models",
+                headers=headers,
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            models = data.get("models", [])
+            if not models:
+                return DEFAULT_AGENT_NAME
+
+            console.print(f"  [cyan]AGI Browser:[/cyan] Available models: {models}")
+
+            # Prefer a fast variant
+            for m in models:
+                if "fast" in m.lower():
+                    console.print(f"  [cyan]AGI Browser:[/cyan] Using fast model: {m}")
+                    return m
+
+            # Fall back to default if it exists, otherwise first available
+            if DEFAULT_AGENT_NAME in models:
+                return DEFAULT_AGENT_NAME
+            console.print(f"  [cyan]AGI Browser:[/cyan] '{DEFAULT_AGENT_NAME}' not found, using: {models[0]}")
+            return models[0]
+        except Exception as e:
+            console.print(f"  [yellow]AGI Browser: Model discovery failed ({e}), using default.[/yellow]")
+            return DEFAULT_AGENT_NAME
+
+    def _send_and_wait(self, headers: dict, message: str, timeout_secs: float = 60) -> str | None:
+        """Send a single message and wait for the agent to finish. Returns final status."""
+        resp = self._http.post(
+            f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/message",
+            headers=headers,
+            json={"message": message},
+            timeout=30,
+        )
+        resp.raise_for_status()
+
+        # Poll until the agent finishes this action
+        after_id = 0
+        deadline = time.time() + timeout_secs
+        while time.time() < deadline:
+            time.sleep(POLL_INTERVAL_SECS)
+            try:
+                resp = self._http.get(
+                    f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/messages",
+                    headers=headers,
+                    params={"after_id": after_id, "sanitize": "true"},
+                    timeout=30,
+                )
+            except requests.exceptions.Timeout:
+                continue
+            if resp.status_code != 200:
+                continue
+
+            data = resp.json()
+            for msg in data.get("messages", []):
+                mid = msg.get("id", 0)
+                after_id = max(after_id, int(mid))
+                content = msg.get("content", "")
+                if isinstance(content, str) and self._looks_like_csv(content):
+                    return content
+
+            status = data.get("status", "")
+            if status in ("finished", "error", "waiting_for_input"):
+                return None
+
+        return None
+
     def _agi_scrape(self, client_name: str, portal_url: str, credentials: dict | None = None) -> dict:
-        """Use AGI Inc API to scrape data from a portal."""
-        headers = {
-            "Authorization": f"Bearer {Config.AGI_API_KEY}",
-            "Content-Type": "application/json",
-        }
+        """Use AGI Inc API to scrape data from a portal.
+
+        Uses tightly-scoped single-action steps instead of one big prompt.
+        """
+        headers = self._build_headers()
+
+        # Step 0: Discover the best available agent model
+        self._agent_name = self._discover_agent(headers)
 
         # Step 1: Create a browser session
         emit_event("browser_navigate", {"url": portal_url, "action": "Creating AGI browser session..."})
-        console.print("  [cyan]AGI Browser:[/cyan] Creating session...")
-        resp = requests.post(
+        console.print(f"  [cyan]AGI Browser:[/cyan] Creating session (agent: {self._agent_name})...")
+        resp = self._http.post(
             f"{Config.AGI_BASE_URL}/sessions",
             headers=headers,
-            json={"agent_name": "agi-0"},
-            timeout=30,
+            json={"agent_name": self._agent_name},
+            timeout=60,
         )
         resp.raise_for_status()
         session = resp.json()
@@ -74,72 +179,93 @@ class BrowserAgent:
                 "action": "AGI Browser session started — watching live",
             })
 
-        # Step 2: Send task to navigate and scrape
-        cred_user = (credentials or {}).get("username", "admin")
-        cred_pass = (credentials or {}).get("password", "admin123")
-        task_message = (
-            f"Navigate to {portal_url}. "
-            f"This is a legacy enterprise portal. Log in with the pre-filled credentials "
-            f"(username: {cred_user}, password: {cred_pass}), then navigate to the data dashboard "
-            f"and download the customer data CSV file for {client_name}. "
-            f"Return the CSV content."
-        )
-        emit_event("browser_navigate", {"url": portal_url, "action": "Navigating to portal and scraping data..."})
+        # Step 2: Navigate to the portal login page
+        emit_event("browser_navigate", {"url": portal_url, "action": "Navigating to portal..."})
         console.print(f"  [cyan]AGI Browser:[/cyan] Navigating to {portal_url}...")
-        requests.post(
-            f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/message",
+        resp = self._http.post(
+            f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/navigate",
             headers=headers,
-            json={"message": task_message},
-            timeout=30,
+            json={"url": portal_url},
+            timeout=60,
+        )
+        resp.raise_for_status()
+        console.print("  [cyan]AGI Browser:[/cyan] Navigation complete.")
+
+        # Step 3: Handle ngrok interstitial if present
+        emit_event("browser_navigate", {"url": portal_url, "action": "Checking for ngrok warning..."})
+        console.print("  [cyan]AGI Browser:[/cyan] Handling ngrok interstitial (if any)...")
+        self._send_and_wait(
+            headers,
+            "If you see a page that says 'You are about to visit' with a 'Visit Site' button, click the 'Visit Site' button. If you already see a login form, do nothing.",
+            timeout_secs=30,
         )
 
-        # Step 3: Poll for results
-        csv_content = self._poll_for_result(headers)
+        # Step 4: Click the Log In button (credentials are pre-filled)
+        cred_user = (credentials or {}).get("username", "admin")
+        cred_pass = (credentials or {}).get("password", "admin123")
+        emit_event("browser_navigate", {"url": portal_url, "action": "Logging in..."})
+        console.print("  [cyan]AGI Browser:[/cyan] Clicking Log In...")
+        self._send_and_wait(
+            headers,
+            f"You are on a login page. The username field already contains '{cred_user}' and the password field already contains '{cred_pass}'. Click the 'Log In' submit button.",
+            timeout_secs=30,
+        )
+
+        # Step 5: Click the Download CSV link on the dashboard
+        emit_event("browser_navigate", {"url": portal_url, "action": "Downloading CSV..."})
+        console.print("  [cyan]AGI Browser:[/cyan] Clicking Download CSV...")
+        csv_content = self._send_and_wait(
+            headers,
+            "You are on a data dashboard page. Find and click the link that says 'Download as CSV' or 'Download CSV'. After clicking, return the full CSV file content as plain text.",
+            timeout_secs=60,
+        )
+
+        if csv_content:
+            console.print("  [cyan]AGI Browser:[/cyan] CSV received from agent.")
+            return self._parse_csv(csv_content)
+
+        # Step 6: If the click didn't return CSV, try asking the agent to read the page
+        console.print("  [cyan]AGI Browser:[/cyan] Trying to read CSV from page...")
+        csv_content = self._send_and_wait(
+            headers,
+            "Copy all the text content you can see on the current page and return it exactly as-is. Do not summarize or modify it.",
+            timeout_secs=30,
+        )
+
         if csv_content:
             return self._parse_csv(csv_content)
 
-        # Fallback: try direct download endpoint
-        console.print("  [yellow]AGI Browser: Polling timeout, trying direct download...[/yellow]")
+        # Fallback: download directly via localhost
+        console.print("  [yellow]AGI Browser: Agent couldn't extract CSV, trying direct download...[/yellow]")
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(portal_url)
+            portal_path = parsed.path.rstrip("/")
+            local_download_url = f"http://localhost:5001{portal_path}/download"
+            resp = self._http.get(local_download_url, timeout=10)
+            if resp.status_code == 200 and self._looks_like_csv(resp.text):
+                console.print("  [cyan]AGI Browser:[/cyan] Local download succeeded")
+                return self._parse_csv(resp.text)
+        except Exception:
+            pass
+
+        # Fallback: try via ngrok with skip header
         try:
             download_url = portal_url.rstrip("/") + "/download"
-            resp = requests.get(download_url, timeout=10)
+            resp = self._http.get(
+                download_url,
+                headers={"ngrok-skip-browser-warning": "1"},
+                timeout=10,
+            )
             if resp.status_code == 200 and self._looks_like_csv(resp.text):
                 console.print("  [cyan]AGI Browser:[/cyan] Direct download succeeded")
                 return self._parse_csv(resp.text)
         except Exception:
             pass
 
-        # Fallback to local
-        console.print("  [yellow]AGI Browser: No CSV in response, using local file.[/yellow]")
+        # Fallback to local files
+        console.print("  [yellow]AGI Browser: All methods failed, using local file.[/yellow]")
         return self._mock_scrape(client_name)
-
-    def _poll_for_result(self, headers: dict, max_polls: int = 30) -> str | None:
-        """Poll AGI session for task completion."""
-        after_id = 0
-        for _ in range(max_polls):
-            time.sleep(2)
-            resp = requests.get(
-                f"{Config.AGI_BASE_URL}/sessions/{self._session_id}/messages",
-                headers=headers,
-                params={"after_id": after_id, "sanitize": "true"},
-                timeout=10,
-            )
-            if resp.status_code != 200:
-                continue
-
-            data = resp.json()
-            messages = data.get("messages", [])
-            for msg in messages:
-                after_id = max(after_id, msg.get("id", 0))
-                content = msg.get("content", "")
-                if self._looks_like_csv(content):
-                    return content
-
-            status = data.get("status", "")
-            if status in ("finished", "error", "waiting_for_input"):
-                break
-
-        return None
 
     @staticmethod
     def _looks_like_csv(content: str) -> bool:
@@ -188,7 +314,7 @@ class BrowserAgent:
         time.sleep(1.5)
 
         emit_event("browser_navigate", {
-            "url": f"/portal/{portal_key}/download",
+            "url": f"/portal/{portal_key}/dashboard",
             "action": "Downloading CSV export...",
         })
         console.print("  [cyan]AGI Browser:[/cyan] Downloading CSV...")
@@ -198,7 +324,7 @@ class BrowserAgent:
             raw_csv = f.read()
 
         emit_event("browser_navigate", {
-            "url": "",
+            "url": f"/portal/{portal_key}/dashboard",
             "action": "CSV downloaded. Parsing data...",
         })
 
@@ -230,9 +356,9 @@ class BrowserAgent:
         """Clean up the browser session."""
         if self._session_id and not Config.DEMO_MODE:
             try:
-                requests.delete(
+                self._http.delete(
                     f"{Config.AGI_BASE_URL}/sessions/{self._session_id}",
-                    headers={"Authorization": f"Bearer {Config.AGI_API_KEY}"},
+                    headers=self._build_headers(),
                     timeout=5,
                 )
             except Exception:

@@ -223,21 +223,22 @@ function switchTab(tab) {
         const { type, data } = event;
 
         switch (type) {
-            case "phase_start":     onPhaseStart(data); break;
-            case "phase_complete":  onPhaseComplete(data); break;
-            case "step_start":      onStepStart(data); break;
-            case "step_complete":   onStepComplete(data); break;
-            case "mapping_result":  onMappingResult(data); break;
-            case "phone_call":      onPhoneCall(data); break;
-            case "phone_response":  onPhoneResponse(data); break;
-            case "memory_store":    onMemoryStore(data); break;
-            case "memory_recall":   onMemoryRecall(data); break;
-            case "memory_update":   onMemoryUpdate(data); break;
-            case "deploy_complete": onDeployComplete(data); break;
+            case "phase_start":      onPhaseStart(data); break;
+            case "phase_complete":   onPhaseComplete(data); break;
+            case "step_start":       onStepStart(data); break;
+            case "step_complete":    onStepComplete(data); break;
+            case "mapping_result":   onMappingResult(data); break;
+            case "phone_call_start": onPhoneCallStart(data); break;
+            case "phone_call":       onPhoneCall(data); break;
+            case "phone_response":   onPhoneResponse(data); break;
+            case "memory_store":     onMemoryStore(data); break;
+            case "memory_recall":    onMemoryRecall(data); break;
+            case "memory_update":    onMemoryUpdate(data); break;
+            case "deploy_complete":  onDeployComplete(data); break;
             case "browser_navigate": onBrowserNavigate(data); break;
-            case "browser_live":    onBrowserLive(data); break;
-            case "demo_complete":   onDemoComplete(data); break;
-            case "reset":           onReset(); break;
+            case "browser_live":     onBrowserLive(data); break;
+            case "demo_complete":    onDemoComplete(data); break;
+            case "reset":            onReset(); break;
             case "error":
                 log("Error: " + (data.message || "Unknown"), "error");
                 resetButton();
@@ -398,48 +399,80 @@ function switchTab(tab) {
         log(data.source + " \u2192 " + data.target + " [" + badge + "]", data.from_memory ? "memory" : "info");
     }
 
-    function onPhoneCall(data) {
+    function onPhoneCallStart(data) {
         const phase = state.currentPhase || 1;
+        // Track multi-question call state
+        state._phoneCallActive = true;
+        state._totalPhoneQuestions = data.total_questions || 1;
+        state._answeredPhoneQuestions = 0;
+        // Only increment calls once (one call, multiple questions)
         state.phases[phase].calls++;
         renderStats(phase);
-        log("PHONE RINGING: \"" + data.column + "\" \u2192 \"" + data.mapping + "\"", "phone");
-        // Show call banner in browser panel
+        log("PHONE CALL: " + data.total_questions + " question(s) in one call", "phone");
+    }
+
+    function onPhoneCall(data) {
+        const qIdx = data.question_index !== undefined ? data.question_index : 0;
+        const total = data.total_questions || 1;
+        var questionLabel = total > 1 ? " (Q" + (qIdx + 1) + "/" + total + ")" : "";
+        log("PHONE Q" + (qIdx + 1) + ": \"" + data.column + "\" \u2192 \"" + data.mapping + "\"" + questionLabel, "phone");
+        // Show call banner in browser panel with current question
         dom.browserOverlay.classList.remove("hidden");
         dom.browserOverlay.innerHTML =
             '<div style="font-size:36px">&#128222;</div>' +
-            '<span style="color:#EC4899;font-size:14px;font-weight:700">CALLING HUMAN...</span>' +
+            '<span style="color:#EC4899;font-size:14px;font-weight:700">CALLING HUMAN...' +
+            (total > 1 ? ' (Q' + (qIdx + 1) + '/' + total + ')' : '') + '</span>' +
             '<span style="color:#475569;font-size:12px">"Is <b>' + esc(data.column) +
             '</b> the field <b>' + esc(data.mapping) + '</b>?"</span>' +
-            '<span style="color:#94A3B8;font-size:11px">Press 1 = Yes, 2 = No</span>';
+            '<span style="color:#94A3B8;font-size:11px">Say yes/no or speak the correct field name</span>';
     }
 
     function onPhoneResponse(data) {
-        const result = data.confirmed ? "CONFIRMED" : "REJECTED";
-        const cls = data.confirmed ? "success" : "warning";
-        log("Human " + result + ": \"" + data.column + "\" \u2192 \"" + data.mapping + "\"", cls);
-        // Reset browser overlay
-        dom.browserOverlay.innerHTML =
-            '<svg class="browser-idle-icon" width="40" height="40" viewBox="0 0 40 40" fill="none"><circle cx="20" cy="20" r="18" stroke="#CBD5E1" stroke-width="2"/><path d="M20 2C20 2 28 10 28 20C28 30 20 38 20 38" stroke="#CBD5E1" stroke-width="1.5"/><path d="M20 2C20 2 12 10 12 20C12 30 20 38 20 38" stroke="#CBD5E1" stroke-width="1.5"/><path d="M3 15h34M3 25h34" stroke="#CBD5E1" stroke-width="1.5"/></svg>' +
-            '<span>AGI Browser \u2014 Idle</span>';
-        showBrowserIdle();
+        const phase = state.currentPhase || 1;
+        const phaseData = state.phases[phase];
 
-        if (data.confirmed) {
-            const phase = state.currentPhase || 1;
-            const phaseData = state.phases[phase];
-            const existing = phaseData.mappings.find(
-                (m) => m.source === data.column && m.target === data.mapping
+        if (data.corrected && data.corrected_to) {
+            log("Human CORRECTED: \"" + data.column + "\" \u2192 \"" + data.corrected_to + "\" (was \"" + data.mapping + "\")", "warning");
+            // Update mapping in phase data
+            var existing = phaseData.mappings.find(
+                function (m) { return m.source === data.column; }
             );
             if (existing) {
-                existing.badge = "human";
-                renderMappings(phase);
+                existing.target = data.corrected_to;
+                existing.badge = "corrected";
+            } else {
+                phaseData.mappings.push({
+                    source: data.column,
+                    target: data.corrected_to,
+                    badge: "corrected",
+                });
+            }
+            renderMappings(phase);
+        } else if (data.confirmed) {
+            log("Human CONFIRMED: \"" + data.column + "\" \u2192 \"" + data.mapping + "\"", "success");
+            var existing2 = phaseData.mappings.find(
+                function (m) { return m.source === data.column && m.target === data.mapping; }
+            );
+            if (existing2) {
+                existing2.badge = "human";
             } else {
                 phaseData.mappings.push({
                     source: data.column,
                     target: data.mapping,
                     badge: "human",
                 });
-                renderMappings(phase);
             }
+            renderMappings(phase);
+        } else {
+            log("Human REJECTED: \"" + data.column + "\" \u2192 \"" + data.mapping + "\"", "warning");
+        }
+
+        // Track answered questions; only hide overlay after the last one
+        state._answeredPhoneQuestions = (state._answeredPhoneQuestions || 0) + 1;
+        var totalQ = state._totalPhoneQuestions || 1;
+        if (state._answeredPhoneQuestions >= totalQ) {
+            state._phoneCallActive = false;
+            showBrowserIdle();
         }
     }
 
@@ -515,6 +548,9 @@ function switchTab(tab) {
         state.demoRunning = false;
         state.memoryBank = [];
         state.results = {};
+        state._phoneCallActive = false;
+        state._totalPhoneQuestions = 0;
+        state._answeredPhoneQuestions = 0;
         state.phases[1] = { client: "Acme Corp", mappings: [], calls: 0, memoryHits: 0, complete: false };
         state.phases[2] = { client: "Globex Inc", mappings: [], calls: 0, memoryHits: 0, complete: false };
         resetSteps();

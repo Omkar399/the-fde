@@ -135,61 +135,102 @@ class FDEAgent:
         # Display mapping table
         self._display_mappings(mappings)
 
-        # === Step 3: Handle Uncertain Mappings ===
+        # === Step 3: Handle Uncertain Mappings (Batch Phone Call) ===
         # For the first client (Novice phase: no prior memory), always verify at
         # least one field with a phone call so the demo shows the human-in-the-loop.
         is_novice = summary["from_memory"] == 0
+        target_field_names = list(self.target_schema.get("fields", {}).keys())
 
         if not uncertain and is_novice and confident:
-            # No uncertain fields but this is the first client — demote the
-            # least-obvious non-memory mapping to uncertain so we make 1 call.
-            # Prefer fields that weren't from memory; pick the last one added.
-            demote = None
-            for m in reversed(confident):
+            # No uncertain fields but this is the first client — demote
+            # non-memory mappings to uncertain so we make a call.
+            demoted = 0
+            for m in list(reversed(confident)):
                 if not m.get("from_memory"):
-                    demote = m
-                    break
-            if demote:
-                confident.remove(demote)
-                summary["auto_mapped"] -= 1
-                demote["confidence"] = "low"
-                uncertain.append(demote)
+                    confident.remove(m)
+                    summary["auto_mapped"] -= 1
+                    m["confidence"] = "low"
+                    uncertain.append(m)
+                    demoted += 1
+                    if demoted >= 2:
+                        break
 
-        # Only call for the single most uncertain field; auto-accept the rest
         if uncertain:
-            call_target = uncertain[0]
-            auto_accepted = uncertain[1:]
-            for m in auto_accepted:
-                m["confidence"] = "medium"
-                confident.append(m)
-                summary["auto_mapped"] += 1
-
-            emit_event("step_start", {"step": "call", "message": f"Calling human for 1 uncertain column (auto-accepted {len(auto_accepted)} others)"})
-            console.print(
-                f"\n[bold cyan]Step 3: Asking Human (1 uncertain column) "
-                f"(Plivo Voice)[/bold cyan]"
-            )
-            summary["phone_calls"] += 1
-            emit_event("phone_call", {"column": call_target["source_column"], "mapping": call_target["target_field"]})
-            human_result = self.teacher.ask_human(
-                call_target["source_column"], call_target["target_field"]
-            )
-            emit_event("phone_response", {
-                "column": call_target["source_column"],
-                "mapping": call_target["target_field"],
-                "confirmed": human_result["confirmed"],
+            emit_event("step_start", {
+                "step": "call",
+                "message": f"Calling human for {len(uncertain)} uncertain column{'s' if len(uncertain) != 1 else ''} (1 call, multi-round conversation)",
             })
-            if human_result["confirmed"]:
-                call_target["confidence"] = "high"
-                call_target["reasoning"] = f"Human confirmed via {human_result['method']}"
-                confident.append(call_target)
-                summary["human_confirmed"] += 1
-            else:
-                console.print(
-                    f"  [yellow]Skipping '{call_target['source_column']}' "
-                    f"(human rejected mapping)[/yellow]"
-                )
-            emit_event("step_complete", {"step": "call", "message": f"Human confirmed {summary['human_confirmed']} mappings"})
+            console.print(
+                f"\n[bold cyan]Step 3: Asking Human ({len(uncertain)} uncertain columns) "
+                f"(Plivo Voice — 1 call)[/bold cyan]"
+            )
+            summary["phone_calls"] = 1
+
+            # Emit phone_call_start event (one call, multiple questions)
+            emit_event("phone_call_start", {
+                "total_questions": len(uncertain),
+            })
+
+            # Emit individual phone_call events for each question
+            for i, m in enumerate(uncertain):
+                emit_event("phone_call", {
+                    "column": m["source_column"],
+                    "mapping": m["target_field"],
+                    "question_index": i,
+                    "total_questions": len(uncertain),
+                })
+
+            # Make ONE batch call for all uncertain mappings
+            batch_results = self.teacher.ask_human_batch(
+                uncertain, target_field_names
+            )
+
+            # Process results
+            for m, result in zip(uncertain, batch_results):
+                if result.get("corrected"):
+                    # Human corrected to a different target field
+                    m["target_field"] = result["target_field"]
+                    m["confidence"] = "high"
+                    m["reasoning"] = f"Human corrected via {result['method']}"
+                    confident.append(m)
+                    summary["human_confirmed"] += 1
+                    emit_event("phone_response", {
+                        "column": m["source_column"],
+                        "mapping": result["target_field"],
+                        "confirmed": True,
+                        "corrected": True,
+                        "corrected_to": result["target_field"],
+                        "method": result.get("method", "demo_simulated"),
+                    })
+                elif result["confirmed"]:
+                    m["confidence"] = "high"
+                    m["reasoning"] = f"Human confirmed via {result['method']}"
+                    confident.append(m)
+                    summary["human_confirmed"] += 1
+                    emit_event("phone_response", {
+                        "column": m["source_column"],
+                        "mapping": m["target_field"],
+                        "confirmed": True,
+                        "corrected": False,
+                        "method": result.get("method", "demo_simulated"),
+                    })
+                else:
+                    console.print(
+                        f"  [yellow]Skipping '{m['source_column']}' "
+                        f"(human rejected mapping)[/yellow]"
+                    )
+                    emit_event("phone_response", {
+                        "column": m["source_column"],
+                        "mapping": m["target_field"],
+                        "confirmed": False,
+                        "corrected": False,
+                        "method": result.get("method", "demo_simulated"),
+                    })
+
+            emit_event("step_complete", {
+                "step": "call",
+                "message": f"Human resolved {len(uncertain)} mappings ({summary['human_confirmed']} confirmed)",
+            })
         else:
             emit_event("step_start", {"step": "call", "message": "No uncertain columns — skipping phone calls"})
             console.print(

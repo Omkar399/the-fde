@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The FDE — Forward Deployed Engineer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --blue-50:  #EFF6FF;
+            --blue-100: #DBEAFE;
+            --blue-500: #3B82F6;
+            --blue-600: #2563EB;
+            --blue-700: #1D4ED8;
+            --slate-50:  #F8FAFC;
+            --slate-100: #F1F5F9;
+            --slate-200: #E2E8F0;
+            --slate-300: #CBD5E1;
+            --slate-400: #94A3B8;
+            --slate-500: #64748B;
+            --slate-600: #475569;
+            --slate-700: #334155;
+            --slate-800: #1E293B;
+            --slate-900: #0F172A;
+        }
+
+        body {
+            background: var(--slate-50);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--slate-800);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .landing {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 24px 32px;
+            max-width: 960px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* Logo + Brand */
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+
+        .brand svg {
+            flex-shrink: 0;
+        }
+
+        .brand-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--slate-900);
+            letter-spacing: -0.02em;
+        }
+
+        /* Headline */
+        .headline {
+            font-size: 48px;
+            font-weight: 700;
+            color: var(--slate-900);
+            text-align: center;
+            letter-spacing: -0.03em;
+            line-height: 1.1;
+            margin-bottom: 16px;
+        }
+
+        .subheadline {
+            font-size: 18px;
+            font-weight: 400;
+            color: var(--slate-500);
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.6;
+            margin-bottom: 56px;
+        }
+
+        /* Feature Cards */
+        .features {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 56px;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .feature-card {
+            flex: 1 1 260px;
+            max-width: 300px;
+            background: #fff;
+            border: 1px solid var(--slate-200);
+            border-radius: 12px;
+            padding: 28px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+            transition: box-shadow 0.2s ease, transform 0.2s ease;
+        }
+
+        .feature-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.04);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+
+        .feature-icon.scrape {
+            background: var(--blue-50);
+            color: var(--blue-600);
+        }
+
+        .feature-icon.analyze {
+            background: #F5F3FF;
+            color: #7C3AED;
+        }
+
+        .feature-icon.deploy {
+            background: #ECFDF5;
+            color: #059669;
+        }
+
+        .feature-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--slate-800);
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            font-weight: 400;
+            color: var(--slate-500);
+            line-height: 1.5;
+        }
+
+        /* CTA Button */
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 32px;
+            background: var(--blue-600);
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            border-radius: 999px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.3);
+        }
+
+        .cta-btn:hover {
+            background: var(--blue-700);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .cta-btn:active {
+            transform: translateY(0);
+        }
+
+        /* Footer */
+        .landing-footer {
+            text-align: center;
+            padding: 24px;
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--slate-400);
+            letter-spacing: 0.01em;
+        }
+
+        /* Responsive */
+        @media (max-width: 640px) {
+            .headline {
+                font-size: 32px;
+            }
+            .subheadline {
+                font-size: 16px;
+                margin-bottom: 40px;
+            }
+            .features {
+                flex-direction: column;
+                align-items: center;
+            }
+            .feature-card {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="landing">
+        <!-- Logo + Brand -->
+        <div class="brand">
+            <svg width="36" height="36" viewBox="0 0 28 28" fill="none">
+                <rect width="28" height="28" rx="8" fill="#2563EB"/>
+                <path d="M7 9h14M7 14h10M7 19h12" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            <span class="brand-text">The FDE</span>
+        </div>
+
+        <!-- Headline -->
+        <h1 class="headline">The Forward Deployed Engineer</h1>
+        <p class="subheadline">
+            An AI agent that scrapes client portals, maps messy data to your schema,
+            learns from human-in-the-loop phone calls, and deploys clean records — automatically.
+        </p>
+
+        <!-- Feature Cards -->
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon scrape">
+                    <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
+                        <path d="M2 3h12M2 8h8M2 13h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="feature-title">Scrape</div>
+                <div class="feature-desc">Logs into client portals and extracts raw data using an AI-driven browser.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon analyze">
+                    <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2L2 5.5L8 9L14 5.5L8 2Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                        <path d="M2 8.5L8 12L14 8.5" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="feature-title">Analyze &amp; Learn</div>
+                <div class="feature-desc">Maps columns to your target schema with AI, and remembers corrections across clients.</div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon deploy">
+                    <svg width="24" height="24" viewBox="0 0 16 16" fill="none">
+                        <path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M2 11v2h12v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                </div>
+                <div class="feature-title">Deploy</div>
+                <div class="feature-desc">Transforms and submits clean, validated records into your CRM — zero manual work.</div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <a href="/dashboard" class="cta-btn">
+            <svg width="16" height="16" viewBox="0 0 14 14" fill="none">
+                <path d="M3 1.5L12 7L3 12.5V1.5Z" fill="currentColor"/>
+            </svg>
+            Let's Get You Onboarded
+        </a>
+    </main>
+
+    <footer class="landing-footer">
+        Powered by Gemini + Plivo + AGI Inc + Composio
+    </footer>
+</body>
+</html>

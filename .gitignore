@@ -13,3 +13,7 @@ data/memory/
 
 # OS
 .DS_Store
+
+# Unrelated test files
+agi_agents_v2.py
+YDC_hackathon_track_11142025.pdf
