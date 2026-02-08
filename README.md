@@ -97,7 +97,7 @@ Unlike traditional automation or even modern AI agents, The FDE:
 
 ### 3. **Production-Ready Architecture**
 - Real browser automation (AGI Inc) for legacy portals
-- Real voice calls (Plivo) for human feedback
+- **Conversational AI voice calls (Plivo)** with speech-to-text for natural human feedback
 - Real API deployment (Composio) for data integration
 - Real-time web dashboard with SSE event streaming
 - **Everything works end-to-end, live**
@@ -105,7 +105,7 @@ Unlike traditional automation or even modern AI agents, The FDE:
 ### 4. **Built with the Future Stack**
 - 🌐 **AGI Inc** - Autonomous browser control
 - 🧠 **Gemini 1.5 Pro** - Reasoning & confidence scoring
-- 📞 **Plivo** - Voice-based human feedback loop
+- 📞 **Plivo** - Conversational voice AI with speech-to-text (natural human teaching)
 - 🔧 **Composio** - Multi-tool API orchestration
 - 🔍 **You.com** - Real-time context loading
 - 💾 **ChromaDB** - Vector memory for continual learning
@@ -124,10 +124,12 @@ $ python3 demo_live.py
 1. **AGI Browser** opens and logs into "Acme Corp" portal
 2. Scrapes messy CSV with columns like `cust_lvl_v2`
 3. **Gemini AI** analyzes: "I'm only 40% confident about `cust_lvl_v2`"
-4. **Plivo calls your phone** 📞
-   - *AI:* "Is `cust_lvl_v2` the Subscription Tier? Press 1 for Yes, 2 for No."
-   - *You:* Press 1
-   - *AI:* "Thank you. I'm learning this pattern."
+4. **Plivo calls your phone** 📞 (Conversational Voice AI)
+   - *AI:* "Hello! I'm analyzing Acme Corp's data and found a column called `cust_lvl_v2`. Based on the sample values, I think this might be the Subscription Tier. Can you confirm if that's correct?"
+   - *You:* "Yes, that's right." (via speech or press 1)
+   - *AI:* "Great! And what about `email_addr`? Should I map that to the email field?"
+   - *You:* "No, actually map it to the contact email field instead." (corrects via voice)
+   - *AI:* "Understood. I'll remember that for future clients. Thank you for teaching me!"
 5. **Memory stored:** `cust_lvl_v2` → `subscription_tier`
 6. **Composio deploys** data to Google Sheets
 7. ✅ Client onboarded successfully
@@ -189,7 +191,7 @@ $ python3 demo_live.py
 | **The Brain** | Gemini 1.5 Pro | Analyzes data with confidence scoring. Decides: *"Do I know this, or do I need help?"* |
 | **The Hands** | AGI Inc Browser | Logs into legacy portals and scrapes data (handles sites with no APIs) |
 | **The Memory** | ChromaDB | Stores learned mappings as vectors. Enables transfer learning across clients |
-| **The Teacher** | Plivo Voice | Calls human when uncertain. Gets ground truth labels via speech + DTMF |
+| **The Teacher** | Plivo Voice AI | **Conversational voice agent** that calls humans when uncertain. Uses speech-to-text with DTMF fallback for natural conversation. Can handle corrections, clarifications, and multi-round Q&A in a single call. |
 | **The Research** | You.com Search | Loads domain context (e.g., *"What is HL7 date format?"*) for better guesses |
 | **The Tools** | Composio | Deploys mapped data to Google Sheets/CRM via authenticated APIs |
 | **The UI** | Flask + SSE | Real-time dashboard showing agent progress with live updates |
@@ -317,19 +319,28 @@ def analyze_column(column_name, sample_data):
     return result
 ```
 
-### Multi-Round Phone Conversations
+### Conversational Voice AI with Plivo
 
-The FDE uses **batch calling** for efficiency:
+The FDE uses **intelligent voice conversations** for efficient human feedback:
 
-1. Collect ALL uncertain mappings
-2. Make ONE phone call
-3. Use Plivo `GetInputElement` with `redirect=True`
-4. Walk through questions sequentially
-5. Each answer triggers next question via `RedirectElement`
-6. Store all learnings at end
+**Key Innovation:** Rather than simple yes/no questions, the agent has **natural conversations** where humans can:
+- ✅ Confirm suggestions via speech: *"Yes, that's correct"*
+- ❌ Reject incorrect mappings: *"No, that's wrong"*
+- 🔄 Provide corrections: *"Actually, map it to the contact_email field instead"*
+- 💬 Ask clarifying questions: *"What's the difference between tier and level?"*
 
-**Before:** 5 uncertain columns = 5 separate phone calls (10 minutes)
-**After:** 5 uncertain columns = 1 phone call, 5 rounds (2 minutes)
+**Technical Implementation:**
+1. Collect ALL uncertain mappings (batch optimization)
+2. Make ONE phone call with multi-round conversation flow
+3. Use **Speech-to-Text** for natural responses + DTMF fallback for reliability
+4. Parse human intent from spoken answers using intelligent text analysis
+5. Each response triggers next question via Plivo `RedirectElement` chaining
+6. Store all learnings in vector memory at call completion
+
+**Efficiency Gains:**
+- **Before:** 5 uncertain columns = 5 separate phone calls (10 minutes of interruptions)
+- **After:** 5 uncertain columns = 1 conversational call with 5 questions (2 minutes total)
+- **Human Experience:** Natural conversation instead of robotic button-mashing
 
 ---
 
