@@ -12,7 +12,7 @@
 [![Tools by Composio](https://img.shields.io/badge/Tools%20by-Composio-purple)](https://composio.dev)
 [![Research by You.com](https://img.shields.io/badge/Research%20by-You.com-red)](https://you.com)
 
-[Demo Video](#) • [Architecture](#architecture) • [Quick Start](#quick-start) • [How It Works](#how-it-works)
+[GitHub Repo](https://github.com/Omkar399/the-fde) • [Architecture](#architecture) • [Quick Start](#quick-start) • [How It Works](#how-it-works)
 
 </div>
 
@@ -417,9 +417,9 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ## 📧 Contact
 
-Built by [Your Name] - [@yourhandle](https://twitter.com/yourhandle)
+Built by **Omkar Podey** - [@Omkar399](https://github.com/Omkar399)
 
-Project Link: [https://github.com/yourusername/The_FDE](https://github.com/yourusername/The_FDE)
+Project Link: [https://github.com/Omkar399/the-fde](https://github.com/Omkar399/the-fde)
 
 ---
 
